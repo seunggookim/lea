@@ -8,5 +8,7 @@ Please see README.mlx on MATLAB to learn more about it.
 
 If you don't have access to a MATLAB license, please know that you can still use MATLAB Online Basic for an educational purpose (free 30 hours/month) at [matlab.mathworks.com](https://matlab.mathworks.com).
 
+For the methodological background of the analysis, please see the tutorial ([mostly English](https://github.com/seunggookim/ksmpc-ss24-sess3)).
+
 (CC0-BY) 2024-09-02, [seung-goo.kim@ae.mpg.de](mailto:seung-goo.kim@ae.mpg.de)
 
