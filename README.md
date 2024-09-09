@@ -1,4 +1,4 @@
-# LEA:👧:
+# LEA👧 - Linearized Encoding Analysis
 
 This MATLAB package is to perform linearized encoding analysis on time series data (see [Kim, 2022, Frontiers in Neuroscience](https://doi.org/10.3389/fnins.2022.928841)).
 
