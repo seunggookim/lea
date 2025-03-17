@@ -7,14 +7,14 @@ disp(repmat('=',[1 80]))
 Job = defaultjob(struct(nSamples=50, nFeatures=2, nResponses=3, nSets=4, ...
   EffectSize=1, SamplingRateHz=1, DelaysSmp=[0, 1], RelToiSec=[2 -2], ...
   LambdaGrid=10.^(-5:0.5:5), nRands=1000, IsFigure=false, ...
-  TempGaussWin=0, IsTest=true), Job);
+  SmoothingFactor=0, IsTest=true), Job, mfilename);
 disp(Job)
 
 % generate toy data🧸:
-[X, Y] = generatetoy(Job);
+[dataX, dataY] = generatetoy(Job);
 
 % run cv folds🏃‍♀️‍➡️‍:
-Mdl = runcv(X, Y, Job);
+Mdl = runcv(dataX, dataY, Job);
 
 logthis('Mean Lopt = ')
 disp(geomean(Mdl.Lopt, 1))
@@ -31,11 +31,11 @@ if Job.IsTest
 end
 
 % randomization test😈:
-Rnd = randtest(X, Y, Mdl, Job);
+Rnd = randtest(dataX, dataY, Mdl, Job);
 
 % create nice plots📊️:
 if Job.IsFigure
-  plotmdl(X, Y, Mdl, Rnd, Job)
+  plotmdl(dataX, dataY, Mdl, Rnd, Job)
 end
 
 if Job.IsTest
