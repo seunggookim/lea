@@ -20,7 +20,7 @@ else
   error WHAT_ELSE?
 end
 
-logthis('getting opt prepared..\n')
+logthis('getting opt prepared..\n', verbosity=Job.IsVerbose)
 
 nPred = size(X{1}, 2);
 nResp = size(Y{1}, 2);
@@ -39,13 +39,13 @@ for iL = 1:nLambda
       CxxTrain = CxxTrain - X{idxTest(j)}' * X{idxTest(j)};
       CxyTrain = CxyTrain - X{idxTest(j)}' * Y{idxTest(j)};
     end
-    logthis('Train COVs MADE!\n')
+    logthis('Train COVs MADE!\n', verbosity=Job.IsVerbose)
 
     warning off
     % >>>>> INVERSE ONLY ONCE PER LAMBDA GRID <<<<<
     projMatrix = (CxxTrain + L)\CxyTrain;
     warning on
-    logthis('Project MATRIX MADE!\n')
+    logthis('Project MATRIX MADE!\n', verbosity=Job.IsVerbose)
 
     SSE_ = zeros(1,nResp);
     for j = 1:numel(idxTest)
@@ -53,7 +53,7 @@ for iL = 1:nLambda
     end
     SSE(iL,:) = SSE(iL,:) + SSE_./numel(idxTest);
     clear SSE_
-    logthis('%i-th lambda: iInner=%i DONE.\n', iL, iInner)
+    logthis('%i-th lambda: iInner=%i DONE.\n', iL, iInner, verbosity=Job.IsVerbose)
   end
   [~, Idx] = min(SSE, [], 1);
   lambdaOpt = Job.LambdaGrid(Idx);

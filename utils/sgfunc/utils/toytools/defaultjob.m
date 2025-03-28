@@ -1,20 +1,30 @@
-function Job = defaultjob(DefaultJob, Job, ProcName)
+function Job = defaultjob(DefaultJob, Job, ProcName, IsVerbose)
 %defaultjob check input fields and set them to default values
 %
-% Job = defaultjob(DefaultJob, Job)
+% Job = defaultjob(DefaultJob, Job, [ProcName], [IsVerbose])
 %
 % (cc) 2021, sgKIM.
 
-if not(exist('ProcName','var')); ProcName=[]; end
+if not(exist('IsVerbose','var')), IsVerbose = true; end
+if exist('ProcName','var')
+  ProcName = ['[',ProcName, '] '];
+else
+  ProcName = '';
+end
+
 FldNames = fieldnames(DefaultJob);
 for iFld = 1:numel(FldNames)
   if ~isfield(Job, FldNames{iFld})
-    if not(isempty(ProcName))
-      fprintf('[%s] (DEFAULT) Job.%s = ', ProcName, FldNames{iFld})
-      disp(DefaultJob.(FldNames{iFld})); fprintf('\b')
+    value = DefaultJob.(FldNames{iFld});
+
+    if IsVerbose
+      fprintf('%s(DEFAULT) Job.%s = ', ProcName, FldNames{iFld})
+      disp(value);
     end
-    Job.(FldNames{iFld}) = DefaultJob.(FldNames{iFld});
+
+    Job.(FldNames{iFld}) = value;
   end
 end
+fprintf('\n')
 
 end

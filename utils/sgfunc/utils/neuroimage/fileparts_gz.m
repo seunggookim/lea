@@ -2,6 +2,7 @@ function [path,name,ext]=fileparts_gz(filename)
 % [path,name,ext]=fileparts_gz(filename)
 % (cc) 2014, sgKIM.
 
+filename = char(filename);
 [path,name,ext] = fileparts(filename);
 if strcmp(ext,'.gz')
 ext = [name(end-3:end),ext];

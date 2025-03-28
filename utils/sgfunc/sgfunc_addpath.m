@@ -7,12 +7,7 @@ addpath(strjoin(paths_cell,':'))
 warning off MATLAB:prnRenderer:opengl
 warning off export_fig:exportgraphics
 
-% MATLAB graphic setup ----
-cmap = get(0, 'FactoryAxesColorOrder');
-% idx = [1 2 5 3 4 6 7];
-idx = [6 2 5 3 4 1 7];
-set(0,'DefaultAxesColorOrder', cmap(idx,:));
-clear cmap idx
+set(0,'DefaultAxesColorOrder', brewermap(7, 'Set2'));
 set(0, 'DefaultLegendBox','off')
 set(0, 'DefaultFigureColor','w')
 set(0, 'DefaultLegendLocation','best')

@@ -1,4 +1,4 @@
-function [features, times_s] = openl3PreprocessWithDims(audioIn,fs,varargin)
+function [features, freqs_hz, times_s] = openl3PreprocessWithDims(audioIn,fs,varargin)
 %OPENL3PREPROCESS Preprocess audio for OpenL3 feature extraction
 %   [features,freqs_hz,times_s] = openl3PreprocessWithDims(audioIn,fs) 
 %   generates spectrograms from the audio input, audioIn, that can be fed 
@@ -140,8 +140,11 @@ if ~isLinear
     Sout = fb * S;
     Sout = reshape(Sout, melSize, 199, 1, []);
 else
-    Sout = S;
+  fb = audio.internal.getFrequencyVector(fs0,512);  
+  Sout = S;
 end
+
+freqs_hz = fb;
 
 Sout = sqrt(Sout);
 Sout = 10 * log10(max(Sout , single(1e-10)));

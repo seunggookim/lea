@@ -63,16 +63,14 @@ spm_jobman('run', matlabbatch);
 % quality check:
 if isfield(Job, 'sanitycheck') && Job.sanitycheck
   for j = 1:numel(fnames)
-    [p1,f1,e1] = myfileparts(fnames{j,1})
-    fname_png = [p1,'/wua',f1,'_in_mni152.png'];
+    [p1,f1,e1] = myfileparts(fnames{j,1});
+    fname_png = [p1,'/w',f1,'_in_mni152.png'];
     if ~isfile(fname_png)
-      fname1 = [p1,'/wua',f1,'1.nii.gz'];
+      fname1 = [p1,'/w',f1,'1.nii.gz'];
       setenv('FSLOUTPUTTYPE','NIFTI_GZ');
-      system(['fslroi ',p1,filesep,'wua',f1,e1,' ',...
-        fname1,' 0 1']);
+      system(['fslroi ',p1,filesep,'w',f1,e1,' ',fname1,' 0 1']);
       fname_mni = [getenv('FSLDIR'),'/data/standard/MNI152_T1_2mm.nii.gz'];
-      slices(fname1, [], ...
-        struct('fname_png',fname_png,'contour',fname_mni));
+      slices(fname1, [], struct('fname_png',fname_png,'contour',fname_mni));
     end
   end
 end

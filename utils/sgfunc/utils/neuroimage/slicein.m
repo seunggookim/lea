@@ -88,8 +88,7 @@ if isfield(cfg,'contour')
       cfg.contour{icon} = double(cfg.contour{icon});
     end
     if isnumeric(cfg.contour{icon})
-      cfg.contour{icon} = struct('vol',cfg.contour{icon}, ...
-        'vox2ras',base.vox2ras);
+      cfg.contour{icon} = struct('vol',cfg.contour{icon}, 'vox2ras',base.vox2ras);
     end
     % make sure all have .vol and .vox2ras:
     cfg.contour{icon} = helper_conform(cfg.contour{icon});
@@ -157,30 +156,6 @@ end
 % background color of the coordinate label, color, size...
 
 
-% %% LAYOUT
-% if ~isfield(cfg,'layout')
-%   cfg.layout = [ceil(sqrt(nslices)) ceil(sqrt(nslices))];
-% end
-% if nslices > prod(cfg.layout)
-%   error('nslices > prod(cfg.layout)')
-% end
-
-% if ~isfield(cfg,'sliceaxes')
-%   if ~cfg.showticks
-%     cfg.sliceaxes = axeslayout(cfg.layout, [0 0 0 0],[0 0 0 0]);
-%   else
-%     cfg.sliceaxes = axeslayout(cfg.layout, [0.1 0 0 0.1],[0 0 0 0]);
-%   end
-% end
-
-% %% Figure
-% if ~isfield(cfg,'figureposition')
-%   figpos = get(0,'defaultFigurePosition');
-%   cfg.figureposition = [figpos(1:2)  150*cfg.layout(2) 150*cfg.layout(1)];
-% end
-% if ~isfield(cfg,'figurecolor')
-%   cfg.figurecolor = 'k';
-% end
 
 %% Color range
 % DATA:
@@ -206,6 +181,8 @@ end
 if ischar(cfg.caxis)
   if strcmp(cfg.caxis,'minmax')
     cfg.caxis = [min(numvals) max(numvals)];
+  elseif strcmp(cfg.caxis,'maxabs')
+    cfg.caxis = [-1 +1]*max(abs(numvals));
   end
 end
 if ~isfield(cfg,'thres')
@@ -258,16 +235,7 @@ end
 clear numvals
 
 %% M A I N ================================================================
-% %% -- Initialize figure
-% if ~isfield(cfg,'figurehandle')
-%   cfg.figurehandle = figure;
-% else
-% 
-% end
-% set(gcf, 'position', cfg.figureposition, 'color', cfg.figurecolor);
-% if isfield(cfg,'fname_png') % if fname_png is given, make it invisible
-%   set(gcf,'visible','off')
-% end
+
 
 %% -- DRAW a SINGLE slice
 H = struct();

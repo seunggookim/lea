@@ -15,7 +15,7 @@ function h = axespos(ax,i)
 % SEE ALSO: AXESLAYOUT
 % (cc) sgKIM, 2019.
 
-if numel(ax.w)==1
+if isscalar(ax.w)
   h = axes('position',[ax.x(i), ax.y(i), ax.w, ax.h]);
 else
   h = axes('position',[ax.x(i), ax.y(i), ax.w(i), ax.h(i)]);

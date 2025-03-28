@@ -6,11 +6,17 @@ function [H, cfg, base, data] = slices(base, data, cfg)
 % BASE can be (1) filename, (2) structure, (3) 3-D numarray
 % DATA can be (1) filename, (2) structure, (3) 3-D numarray, (4) vector
 %             (5) 'fslho-thr0' | 'fslho-thr25' | 'fslho-thr50'
+%             (6) a structure with 4-D numarray with "VolumeToView" field (e.g., Data.VolumeToView = 1)
 % CFG is a structure:
 % (.contour) can be (1) filename, (2) structure, or (3) 3-D numarray
 %                   or a cell array of such
+% (.basemethod)
+% (.method)
+% (.contoursmoothing)
+% (.colorbarvisible)
 %
-% (cc) 2021, dr.seunggoo.kim@gmail.com
+%
+% (CC4-BY) 2021-2024, seung-goo.kim@ae.mpg.de
 
 %% C O N F I G ============================================================
 if ~exist('cfg','var'), cfg=[]; end
@@ -34,8 +40,11 @@ if islogical(base)
 end
 if isnumeric(base)
   warning('Numeric base volume: vox2ras = eye(4) assumed.')
+  cfg.unit = 'vox';
   Q = eye(4); Q(1:3,4) = 1;
   base = struct('vol',base, 'vox2ras',Q);
+else
+  cfg.unit = 'mm';
 end
 base = helper_conform(base); % make sure all have .vol and .vox2ras
 
@@ -59,8 +68,7 @@ end
 if isnumeric(data) % numeric vector of matrix
   if ~isempty(data) % Allowing data to be null (possibly only base+contour)
     if isvector(data)
-      assert(numel(data)==numel(base.vol), ...
-        '1-D data does not seem to be in the same space as base.vol')
+      assert(numel(data)==numel(base.vol), '1-D data does not seem to be in the same space as base.vol')
       data = reshape(data, size(base.vol));
     end
     data = struct('vol',data, 'vox2ras', base.vox2ras);
@@ -85,8 +93,7 @@ if isfield(cfg,'contour')
       cfg.contour{icon} = double(cfg.contour{icon});
     end
     if isnumeric(cfg.contour{icon})
-      cfg.contour{icon} = struct('vol',cfg.contour{icon}, ...
-        'vox2ras',base.vox2ras);
+      cfg.contour{icon} = struct('vol',cfg.contour{icon}, 'vox2ras',base.vox2ras);
     end
     % make sure all have .vol and .vox2ras:
     cfg.contour{icon} = helper_conform(cfg.contour{icon});
@@ -137,12 +144,8 @@ if ischar(cfg.xyz)
     nslices = str2double(cfg.xyz(irow,4:end)); % # slices for this row
 
     % equidistance over a volume (Data if exist; otherwise BASE)
-%     if ~isempty(data)
-%       bbox = bbox_data;
-%     else
-%       bbox = bbox_base;
-%     end
-    bbox = bbox_base; % Why data? when it is useful? when you have sparse data consistently across all conditions, but if not this can be inconvenient.
+    bbox = bbox_base; % Why data? when it is useful? when you have sparse data consistently across all conditions, 
+                      % but if not this can be inconvenient.
     coords = linspace(bbox(xyzdim,1), bbox(xyzdim,2), nslices+2);
     xyz_add = nan(nslices,3);
     xyz_add(:,xyzdim) = sort(coords(2:end-1)); % excluding both ends
@@ -163,16 +166,15 @@ end
 if ~isfield(cfg,'layout')
   cfg.layout = [ceil(sqrt(nslices)) ceil(sqrt(nslices))];
 end
-% if ischar(cfg.layout)
-%   cfg.layout = double(strsplit(cfg.layout,'x'));
-% end
 if nslices > prod(cfg.layout)
   error('nslices > prod(cfg.layout)')
 end
-if ~cfg.showticks
-  cfg.sliceaxes = axeslayout(cfg.layout, [0 0 0 0],[0 0 0 0]);
-else
-  cfg.sliceaxes = axeslayout(cfg.layout, [0.1 0 0 0.1],[0 0 0 0]);
+if ~isfield(cfg,'sliceaxes')
+  if ~cfg.showticks
+    cfg.sliceaxes = axeslayout(cfg.layout, [0 0 0 0],[0 0 0 0]);
+  else
+    cfg.sliceaxes = axeslayout(cfg.layout, [0.1 0 0 0.1],[0 0 0 0]);
+  end
 end
 
 %% Figure
@@ -213,7 +215,7 @@ end
 if ~isfield(cfg,'thres')
   cfg.thres = [0 0];
 end
-if numel(cfg.thres) == 1
+if isscalar(cfg.thres)
   cfg.thres = [-abs(cfg.thres) abs(cfg.thres)];
 end
 
@@ -264,14 +266,7 @@ clear numvals
 if ~isfield(cfg,'figurehandle')
   cfg.figurehandle = figure;
 else
-%   if ~isfield(cfg,'figurehold')
-%     cfg.figurehold = false;
-%   end
-%   if cfg.figurehold
-%     hold on
-%   else
-%     hold off
-%   end
+
 end
 set(gcf, 'position', cfg.figureposition, 'color', cfg.figurecolor);
 if isfield(cfg,'fname_png') % if fname_png is given, make it invisible
@@ -290,43 +285,36 @@ for iaxes = 1:nslices
   end
 
   % Get slices
-  [Vbase,Ubase,Wbase] = vol2slice(...
-    base.vol, vox2ras_0to1(base.vox2ras), cfg.xyz(iaxes,:), ...
-    cfg.basemethod);
+  [Vbase,Ubase,Wbase] = helper_vol2slice(base.vol, vox2ras_0to1(base.vox2ras), cfg.xyz(iaxes,:), cfg.basemethod);
 
   if ~isempty(data)
-    [Vover,Uover,Wover] = vol2slice(...
-      data.vol, vox2ras_0to1(data.vox2ras), cfg.xyz(iaxes,:), cfg.method);
+    [Vover,Uover,Wover] = helper_vol2slice(data.vol, vox2ras_0to1(data.vox2ras), cfg.xyz(iaxes,:), cfg.method);
   end
 
   % Draw base/over slices
   switch (cfg.method)
     case 'mip'
       % - mip of overlay
-      H(iaxes).overslice = helper_over(...
-        H(iaxes).overaxes, Vover, Uover, Wover, cfg);
+      H(iaxes).overslice = helper_over(H(iaxes).overaxes, Vover, Uover, Wover, cfg);
 
       % - base contour
-      H(iaxes).baseslice = helper_contour(...
-        H(iaxes).baseaxes, Vbase, Ubase, Wbase, cfg);
+      H(iaxes).baseslice = helper_contour(H(iaxes).baseaxes, Vbase, Ubase, Wbase, cfg);
 
       % - mip-specific setting
       set(H(iaxes).baseaxes, 'color','none')
       axis(H(iaxes).baseaxes, 'image')
 
       % - equalize axes
-      equalizeaxes(H(iaxes).baseaxes, H(iaxes).overaxes)
+      helper_equalizeaxes(H(iaxes).baseaxes, H(iaxes).overaxes)
 
     otherwise
       % - base image
-      H(iaxes).baseslice = helper_img(...
-        H(iaxes).baseaxes, Vbase, Ubase, Wbase);
+      H(iaxes).baseslice = imagesc(H(iaxes).baseaxes, Ubase.axis, Wbase.axis, Vbase);
 
       % - overlay
       if ~isempty(data)
-        H(iaxes).overslice = helper_over(...
-          H(iaxes).overaxes, Vover, Uover, Wover, cfg);
-        equalizeaxes(H(iaxes).baseaxes, H(iaxes).overaxes)
+        H(iaxes).overslice = helper_over(H(iaxes).overaxes, Vover, Uover, Wover, cfg);
+        helper_equalizeaxes(H(iaxes).baseaxes, H(iaxes).overaxes)
       end
 
       % - overlay-specific setting
@@ -348,9 +336,8 @@ for iaxes = 1:nslices
       cmap = brewermap(ncons, 'Set1');
     end
     for icon = 1:ncons
-      [Vi,U,W] = vol2slice(...
-        cfg.contour{icon}.vol, vox2ras_0to1(cfg.contour{icon}.vox2ras), ...
-        cfg.xyz(iaxes,:), 'nearest');
+      [Vi, U, W] = helper_vol2slice( ...
+        cfg.contour{icon}.vol, vox2ras_0to1(cfg.contour{icon}.vox2ras), cfg.xyz(iaxes,:), 'nearest');
       if ~isempty(data)
         axes_ref = H(iaxes).overaxes;
       else
@@ -368,18 +355,19 @@ for iaxes = 1:nslices
   xyzdim = find(~isnan(cfg.xyz(iaxes,:)));
   xyzlabel = 'XYZ';
   u1 = median(Ubase.axis);
-  w1 = prctile(Wbase.axis,95);
-  text(H(iaxes).baseaxes, u1, w1, ...
-    sprintf('%s = %.0f', xyzlabel(xyzdim), cfg.xyz(iaxes,xyzdim)), ...
-    'fontsize',cfg.coordfontsize, 'color',cfg.coordfontcolor, ...
-    'HorizontalAlignment','center');
+  if not(isfield(cfg,'coordinatelocation_slice'))
+    w1 = prctile(Wbase.axis,95);
+  else
+    w1 = Wbase.axis(1) + range(Wbase.axis) * cfg.coordinatelocation_slice;
+  end
+  text(H(iaxes).baseaxes, u1, w1, sprintf('%s = %.0f %s', xyzlabel(xyzdim), cfg.xyz(iaxes,xyzdim), cfg.unit), ...
+    'fontsize',cfg.coordfontsize, 'color',cfg.coordfontcolor, 'HorizontalAlignment','center');
 
   % -- FILE NAME? TITLE BAR?
 
 
   % - common setting
-  set(H(iaxes).baseaxes, ...
-    'DataAspectRatio',[1 1 1], 'Ydir','nor', 'Visible','off')
+  set(H(iaxes).baseaxes, 'DataAspectRatio',[1 1 1], 'Ydir','nor', 'Visible','off')
   colormap(H(iaxes).baseaxes, cfg.basecolormap)
   if cfg.showticks
     xlabel(H(iaxes).baseaxes, Ubase.axisname);
@@ -388,23 +376,22 @@ for iaxes = 1:nslices
   end
 
   if ~isempty(data)
-    set(H(iaxes).overaxes, 'visible','off', ...
-      'DataAspectRatio',[1 1 1], 'Ydir','nor')
+    set(H(iaxes).overaxes, 'visible','off', 'DataAspectRatio',[1 1 1], 'Ydir','nor')
     colormap(H(iaxes).overaxes, cfg.colormap)
     try
-      caxis(H(iaxes).overaxes, cfg.caxis)
-    catch ME
+      clim(H(iaxes).overaxes, cfg.caxis)
+    catch 
       warning('caxis not sane')
     end
     try
-      caxis(H(iaxes).baseaxes, cfg.basecaxis)
-    catch ME
+      clim(H(iaxes).baseaxes, cfg.basecaxis)
+    catch 
       warning('caxis not sane')
     end
   else
     try
-      caxis(H(iaxes).baseaxes, cfg.basecaxis)
-    catch ME
+      clim(H(iaxes).baseaxes, cfg.basecaxis)
+    catch 
       warning('caxis not sane')
     end
   end
@@ -443,7 +430,6 @@ end
 
 %% Title
 if isfield(cfg,'title')
-%   title(H(iaxes).colorbar, cfg.title, 'color', cfg.coordfontcolor)
   title(cfg.title, 'color', cfg.coordfontcolor)
 end
 
@@ -462,190 +448,5 @@ if isfield(cfg,'fname_png')
   close(cfg.figurehandle)
 end
 if ~nargout, clear H cfg; end
-
-end
-
-%-------------------------------------------------------------------------%
-% SUBFUNCTIONS                                                            %
-%-------------------------------------------------------------------------%
-
-function mri = helper_read(fname)
-[~,~,ext] = fileparts_gz(fname);
-switch (ext)
-  case {'.nii','.nii.gz','.img'}
-    % Try "my" version of MATLAB Image Processing Toolbox (since 2016)
-    if exist('niftiinfogz','file') && exist('niftireadgz','file')
-      [V,info] = niftireadgz(fname);
-      mri = struct('vol',V, 'info',info);
-      % NOTE: NIFTIREAD doesn't upscale precision (hmm...)
-
-    elseif exist('load_nifti','file') % FreeSurfer
-      mri = load_nifti(fname);
-    elseif exist('load_untouch_nii','file') % NIFTI toolbox
-      mri = load_untouch_nii(fname);
-    else
-      error('CANNOT FIND any function to read NIFTI/ANALYZE files!')
-    end
-  case {'.mgh','.mgz'}
-    [~, M, P] = load_mgh(fname, [], [], 1);
-    mri = struct('vox2ras',M, 'tr',P(1), 'filpangle',P(2), 'te',P(3), ...
-      'ti',P(3), 'fov',P(4));
-    [mri.vol] = load_mgh(fname);
-  otherwise
-    error('EXTENSION UNRECOGNIZED: %s',ext)
-end
-mri.vol = double(mri.vol); % now I just upscale it as I won't save it
-end
-
-function mri = helper_conform(mri)
-if ~isfield(mri,'vol')
-  if isfield(mri,'img')  % from LOAD_UNTOUCH_NII
-    mri.vol = mri.img;
-    mri = rmfield(mri,'img');
-  else
-    error('UNKNOWN volume fieldname??')
-  end
-end
-if ~isfield(mri,'vox2ras')
-  if isfield(mri,'hdr')  % from LOAD_UNTOUCH_NII
-    mri.vox2ras = [mri.hdr.hist.srow_x; ...
-      mri.hdr.hist.srow_y; mri.hdr.hist.srow_z; 0 0 0 1];
-  elseif isfield(mri,'info')  % from NIFTIINFO
-    mri.vox2ras = mri.info.Transform.T';  % 0-based
-  else
-    error('UNKNOWN header fieldname??')
-  end
-end
-if size(mri.vol,4) > 1
-  fprintf('[%s] 4-D image is given. Showing the only first volume.\n', ...
-    mfilename);
-  mri.vol = mri.vol(:,:,:,1);
-end
-mri.vol = double(mri.vol);
-
-end
-
-function h = helper_over(Ha, Vi, u, w, cfg)
-if isequal(cfg.thres, [0 0]) % no thresholding
-  Vi(Vi==0) = nan;
-  h = pcolor(Ha, u.axis, w.axis, Vi);
-  h.LineStyle = 'none';
-  if isfield(cfg,'facealpha')
-    h.FaceAlpha = cfg.facealpha;
-  end
-else
-  % suprathreshold image:
-  Vsupra = Vi;
-  Vsupra(Vsupra==0) = nan;
-  Vsupra(cfg.thres(1)<Vi & Vi<cfg.thres(2)) = nan;
-  h = pcolor(Ha, u.axis, w.axis, Vsupra);
-  h.LineStyle = 'none';
-
-  % subthreshold image:
-  if cfg.subthres
-    hold on
-    Vsub = Vi;
-    Vsub(Vsub==0) = nan;
-    Vsub(Vi<cfg.thres(1) | cfg.thres(2)<Vi) = nan;
-    h2 = pcolor(Ha, u.axis, w.axis, Vsub);
-    h2.LineStyle = 'none';
-    h2.FaceAlpha = 0.5;
-    hold off
-  end
-end
-set(Ha,'color','none')
-end
-
-function Hi = helper_img(Ha, Vi, u, w)
-Hi = imagesc(Ha, u.axis, w.axis, Vi);
-end
-
-function Hc = helper_contour(Ha, Vi, u, w, cfg)
-hold on
-if cfg.contoursmoothing % slight smoothing?
-[~,Hc] = contour(Ha, u.axis, w.axis, ...
-  convn(Vi,ones(cfg.contoursmoothing),'same'), 1); 
-else % no smoothing
-  [~,Hc] = contour(Ha, u.axis, w.axis, Vi, 1);
-end
-hold off
-end
-
-function helper_annot()
-
-end
-
-function equalizeaxes(baseaxes, overaxes)
-xlim = [min(baseaxes.XLim(1),overaxes.XLim(1)), ...
-  max(baseaxes.XLim(2),overaxes.XLim(2))];
-ylim = [min(baseaxes.YLim(1),overaxes.YLim(1)), ...
-  max(baseaxes.YLim(2),overaxes.YLim(2))];
-baseaxes.XLim = xlim;
-baseaxes.YLim = ylim;
-overaxes.XLim = xlim;
-overaxes.YLim = ylim;
-end
-
-function [data, cmap] = helper_readfslatlas(atlasdescp)
-% Blame windows users:
-if ~isunix && ~ismac, error('Why Windows?'), end 
-
-%--- FSL Harvard-Oxford Cort+Subcort --------------------------------------
-
-% Find filenames
-fslpath = getenv('FSLDIR');
-str = strsplit(atlasdescp,'-');
-if numel(str)>1
-  suffix = str{2};
-else
-  suffix = 'thr25';
-end
-fn_atl{1} = [fslpath,'/data/atlases/HarvardOxford/',...
-  'HarvardOxford-cort-maxprob-',suffix,'-1mm.nii.gz'];
-fn_xml{1} = [fslpath,'/data/atlases/HarvardOxford-Cortical.xml'];
-fn_atl{2} = [fslpath,'/data/atlases/HarvardOxford/',...
-  'HarvardOxford-sub-maxprob-',suffix,'-1mm.nii.gz'];
-fn_xml{2} = [fslpath,'/data/atlases/HarvardOxford-Subcortical.xml'];
-fn = dir([fslpath,'/fslpython/envs/fslpython/lib/python*/',...
-  'site-packages/fsleyes/assets/luts/harvard-oxford-cortical.lut']);
-assert(numel(fn)==1)
-fn_lut{1} = fullfile(fn.folder, fn.name);
-fn = dir([fslpath,'/fslpython/envs/fslpython/lib/python*/',...
-  'site-packages/fsleyes/assets/luts/harvard-oxford-subcortical.lut']);
-assert(numel(fn)==1)
-fn_lut{2} = fullfile(fn.folder, fn.name);
-for i = 1:2
-  assert(isfile(fn_atl{i}), 'file "%s" NOT FOUND!', fn_atl{i})
-  assert(isfile(fn_xml{i}), 'file "%s" NOT FOUND!', fn_xml{i})
-  assert(isfile(fn_lut{i}), 'file "%s" NOT FOUND!', fn_lut{i})
-end
-
-% Read files
-nctx = 48;
-nstx = 21;
-ctx = helper_read(fn_atl{1});
-assert(max(ctx.vol(:))==nctx)
-stx = helper_read(fn_atl{2});
-assert(max(stx.vol(:))==nstx)
-% remove large masks (cortical-WM, cortcial-GM, CSF)
-lbl2remove = [1 2 3 12 13 14];
-stx.vol(ismember(stx.vol, lbl2remove)) = 0;
-
-% Combine CORTICAL + SUBCORTICAL
-data = ctx;
-data.vol(stx.vol>0) = nctx+stx.vol(stx.vol>0);
-data.vol(data.vol==0) = nan;
-
-% Read lookup table:
-tbl_ctx = myfsl_readlut(fn_lut{1});
-assert(size(tbl_ctx,1) == nctx)
-tbl_stx = myfsl_readlut(fn_lut{2});
-assert(size(tbl_stx,1) == nstx)
-
-cmap_ctx = [tbl_ctx.r, tbl_ctx.g, tbl_ctx.b];
-cmap_stx = [tbl_stx.r, tbl_stx.g, tbl_stx.b];
-cmap = [cmap_ctx; cmap_stx];
-
-
 
 end

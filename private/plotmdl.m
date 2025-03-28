@@ -1,41 +1,222 @@
-function plotmdl(X, Y, Mdl, Isc, Rnd, Job)
+function plotmdl(X, Y, Mdl, Itc, Rnd, Job)
 % plotmdl(X, Y, Mdl, Rnd, Job)
 
-Data = conformdata(X, Y, Job);
 
-switch Y{1}.Name
+%% Set up for a given modality
+persistent MODALITY
+MODALITY = Y{1}.Name;
+switch MODALITY
+  case 'fmri'
+    myPath = fileparts(mfilename('fullpath'));
+    Mni = fullfile(myPath,'..','utils','standards','MNI152_T1_2mm_brain.nii.gz');
+    INFO = Y{1}.DataInfo.UserData.Info;
+    FIG_POS = [800 800];
+    axesLayout = axeslayout([3 3], [0 0 0 0], 'tight');
+  case 'eeg'
+    INFO = Y{1}.DataInfo.UserData.chanlocs;
+    FIG_POS = [800 400];
+    axesLayout = axeslayout([1 3], 'tight', 'tight');
   case 'bhv'
-    helper_bhv()
+    INFO = Y{1}.UserData;
+    FIG_POS = [600 250];
+    axesLayout = axeslayout([1 3]);
+end
+colors = get_colormap(3,1);
+cmapR = flipud([linspacevec(colors(1,:), [1 1 1], 128); linspacevec([1 1 1], colors(3,:), 128)]);
+cmapL = (brewermap(128,'greys'));
+cmapL = flipud(cmapL(1:64+32,:));
+cmapB = flipud([linspacevec(colors(2,:), [1 1 1], 128); linspacevec([1 1 1], colors(3,:), 128)]);
+
+
+%% Additional: if ITC is computed:
+if not(isempty(Itc))
+  h = figure;
+  h.Position(3:4) = [600 250];
+  Avg = struct(r=Itc.Y.meanCorr);
+  vars = ["r"];
+  dictName = dictionary(["r"], ["ITC [r]"]);
+  mriSections = [1];
+  drawitc()
+  fnPdf = strrep(Job.FnameMdl, '.mat', '_itc.pdf');
+  exportgraphics(gcf, fnPdf); drawnow;
+  logthis('Figure saved: '); ls(fnPdf)
 end
 
-if not(isempty(Isc))
-  helper_isc()
+
+%% Set up CV-averaged variables to plot
+switch MODALITY
+  case 'fmri'
+    axesLayout = axeslayout([3 3], [0 0 0 0], 'tight');
+  case 'eeg'
+    axesLayout = axeslayout([1 3], 'tight', 'tight');
+  case 'bhv'
+    axesLayout = axeslayout([1 3]);
 end
+mriSections = [1 2 3];
+Avg = struct(r=mean(Mdl.Acc,1), l=log10(geomean(Mdl.Lopt,1)), b=squeeze(mean(mean(Mdl.Bhat,1),2)));
+vars = ["r", "l", "b"];
+dictName = dictionary(["r", "l", "b"], ["Pred acc [r]","Lambda* [log10]", "Mean weight [au]"]);
+
+%% Draw averaged values
+h = figure;
+h.Position(3:4) = FIG_POS;
+eval(['draw',MODALITY,'()'])
+set(h, Color='w')
+drawnow;
+fnPdf = strrep(Job.FnameMdl, '.mat', '_acc.pdf');
+exportgraphics(gcf, fnPdf); drawnow;
+logthis('Figure saved: '); ls(fnPdf)
 
 
 
+%% Additional: if the randomization test is computed:
+if not(isempty(Rnd))
+  error('Now create this!')
+end
 
 
 %% NESTED HELPER FUNCTIONS
-  function helper_isc()
-    figure(Colormap = flipud(brewermap(256,'Spectral')) );
+  function drawitc()
+    axesLayout = axeslayout([1 3]);
+    eval(['draw',MODALITY,'()'])
 
+    % ITC-Y
+    axespos(axesLayout,2)
+    bar(max(Itc.Y.subjCorr, [], 'omitnan'))
+    xlabel('Trials'); ylabel('max ITC [r]'); title([MODALITY,'-ITC'])
+
+    % ITC-X
+    axespos(axesLayout,3)
+    bar(max(Itc.Y.subjCorr, [], 'omitnan'))
+    xlabel('Trials'); ylabel('max ITC [r]'); title('Feature-ITC')
+    
   end
 
 
-  function helper_fmri()
-    figure(Colormap = flipud(brewermap(256,'Spectral')) );
+  function drawfmri()
+    h_ax = nan(1,numel(vars)*numel(mriSections));
+    for i = 1:numel(vars)
 
+      Mri = struct(vol=nan(INFO.ImageSize(1:3), 'double'), info=INFO);
+      Mri.vol(Mri.info.Mask(:)) = Avg.(vars(i));
+      Base = Mri;
+      Base.vol = Base.vol*inf;
+
+      orientations = {'sag1','cor1','axi1'};
+      for j = mriSections
+        k = i+3*(j-1);
+        h_ax(k) = axespos(axesLayout, k); axis off
+
+        % create a slice with a contour of the MNI brain
+        h_slice = slicein(Base, Mri, struct(method='linear', contour=Mni, contourcolormap=.5*[1 1 1], ...
+          axes=h_ax(k), coordfontcolor='none', ncontourlevels=2, contourwidth=2, xyz=orientations{j}, ...
+          caxis='maxabs'));
+        h_slice.colorbar.Visible = 'off';
+        if contains(dictName(vars(i)), 'E[')
+          bgColor = [.985 .985 .900];
+        else
+          bgColor = [1 1 1];
+        end
+        colormap(h_slice.baseaxes, bgColor);
+        h_img = h_slice.overaxes;
+        TitleText = setcolormap(i, h_img, h_slice.colorbar);
+
+        if j == 2 % a title between the sagittal and coronal sections
+          title(h_ax(k), TitleText);
+        end
+
+        if j ==3 % a colorbar between the coronal and axial sections
+          h_slice.colorbar.Visible = 'on';
+          pos = get(h_ax(k), 'Position'); % [x y w h]
+          width_margin = pos(3)*.6;
+          pos(3) = pos(3) - width_margin;
+          pos(1) = pos(1) + width_margin/2;
+          pos(2) = pos(2) + pos(4);
+          pos(4) = pos(4)*0.02;
+          set(h_slice.colorbar, xColor='k', yColor='k', FontSize=9, Position=pos)
+        end
+
+      end
+    end
   end
 
 
-  function helper_eeg()
-    figure(Colormap = flipud(brewermap(256,'Spectral')) );
+  function draweeg()
+    h_ax = [];
+    for i = 1:numel(vars)
+      h_ax(i) = axespos(axesLayout, i);
+      topoplot(Avg.(vars(i)), INFO); axis image
+      h_ch = get(gca, 'children');
+      h_ch(5).FaceColor = [1 1 1];
+      if contains(dictName(vars(i)), 'E[')
+        h_ch(5).FaceColor = [.985 .985 .850];
+      end
+    end
+    for i = 1:numel(vars)
+      h_cb = colorbar(h_ax(i), location='southoutside', FontSize=10);
+      h_cb.Position(2) = h_cb.Position(2)-0.04; % [x y w h]
+      width_margin = h_cb.Position(3)*.5;
+      h_cb.Position(3) = h_cb.Position(3) - width_margin;
+      h_cb.Position(1) = h_cb.Position(1) + width_margin/2;
+      h_cb.Position(4) = h_cb.Position(4)*0.2;
 
+      h_img = h_ax(i);
+      TitleText = setcolormap(i, h_img, h_cb);
+      title(h_ax(i), TitleText)
+    end
   end
 
 
-  function helper_bhv()
+  function drawbhv()
+    h_ax = [];
+    for i = 1:numel(vars)
+      h_ax(i) = axespos(axesLayout, i);
+      h_b = bar(Avg.(vars(i)));
+      yLabel = dictName(vars(i));
+      set(h_ax(i), xTicklabel=INFO.VariableNames, FontSize=11)
+      switch extract(vars(i),1)
+        case "r"
+          TitleText = sprintf('max %s = %.3f', dictName(vars(i)), max(Avg.(vars(i))));
+          ylabel(yLabel); set(h_b, FaceColor=colors(1,:));
+        case "l"
+          TitleText = sprintf('min %s = %.2f', dictName(vars(i)), min(Avg.(vars(i))));
+          ylabel(yLabel); set(h_b, FaceColor=0.75*[1 1 1]);
+        case "b"
+          TitleText = sprintf('max |%s| = %.3f', dictName(vars(i)), max(abs(Avg.(vars(i)))));
+          ylabel(yLabel); set(h_b, FaceColor=colors(3,:));
+      end
+      h_t = title(h_ax(i), TitleText, FontSize=10.5, Color=.2*[1 1 1], FontWeight='normal');
+      h_t.Position(2) = h_t.Position(2) + 0.08*diff(ylim(h_ax(i)));
+      if contains(dictName(vars(i)),'E[')
+        set(gca,'color',[.985 .985 .965])
+      end
+    end
+  end
+
+
+  function TitleText = setcolormap(i, h_img, h_cb)
+    switch extract(vars(i),1)
+      case "r"
+        set(h_img, colormap=cmapR)
+        title(h_cb, 'r')
+        h_cb.Ruler.TickLabelRotation = 0;
+        TitleText = sprintf('max %s = %.3f', dictName(vars(i)), max(Avg.(vars(i))));
+      case "l"
+        set(h_img, colormap=cmapL);
+        title(h_cb, 'log\lambda')
+        h_cb.Ruler.TickLabelRotation = 0;
+        TitleText = sprintf('min %s = %.2f', dictName(vars(i)), min(Avg.(vars(i))));
+      case "b"
+        set(h_img, colormap=cmapB)
+        title(h_cb, 'b')
+        h_cb.Ruler.TickLabelRotation = 0;
+        TitleText = sprintf('max |%s| = %.3f', dictName(vars(i)), max(abs(Avg.(vars(i)))));
+    end
+  end
+
+
+
+  function drawtoy()
     figure(Colormap = flipud(brewermap(256,'Spectral')) );
     AxesPos = axeslayout([3 3]);
 

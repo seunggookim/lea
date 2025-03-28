@@ -79,7 +79,7 @@ function Job = myspm_fmriprep12 (Job)
 % This script also uses original and modified MATLAB code by others:
 % - DPARSF by Chao-Gan YAN: http://rfmri.org/DPARSF
 %
-% (cc) 2015-2023. dr.seunggoo.kim@gmail.com
+% (cc) 2015-2024. dr.seunggoo.kim@gmail.com
 
 if nargin==0, help(mfilename); return; end
 
@@ -230,17 +230,21 @@ if not(isfile(Job.FnameEpiMean))
   logthis('File created: '); ls(Job.FnameEpiMean)
 end
 
-%% Intensity-bias correction of EPI (for stable coregistration)
-Job.FnameEpiUnbiased = fullfile(Job.EpiDname, ['mmeanua',Job.EpiPrefix,'.nii']); % bias-corrected EPI
-try
-  if not(isfile(Job.FnameEpiUnbiased))
-    system(['mri_nu_correct.mni --i ',Job.FnameEpiMean,' --o ',Job.FnameEpiUnbiased])
-    logthis('File created: '); ls(Job.FnameEpiUnbiased)
-  end
-catch
-  system(['ln -sf ',Job.FnameEpiMean,' ',Job.FnameEpiUnbiased])
-  logthis('Link is created: '); ls(Job.FnameEpiUnbiased)
+%% Intensity-bias correction + SkullStripping of EPI (for stable coregistration)
+Job.FnameEpiBm = fullfile(Job.EpiDname, ['bmmeanua',Job.EpiPrefix,'.nii']); % bias-corrected EPI
+if not(isfile(Job.FnameEpiBm))
+  myspm_seg12(struct(fname_t1w=Job.FnameEpiMean), 'ss');
+  logthis('File created: '); ls(Job.FnameEpiBm)
 end
+% try
+%   if not(isfile(Job.FnameEpiUnbiased))
+%     system(['mri_nu_correct.mni --i ',Job.FnameEpiMean,' --o ',Job.FnameEpiUnbiased])
+%     logthis('File created: '); ls(Job.FnameEpiUnbiased)
+%   end
+% catch
+%   system(['ln -sf ',Job.FnameEpiMean,' ',Job.FnameEpiUnbiased])
+%   logthis('Link is created: '); ls(Job.FnameEpiUnbiased)
+% end
 
 
 %% 4. COMPCOR regressors
@@ -268,28 +272,28 @@ end
 if not(Job.UseAnts)
   % OUTPUT? resampled volume#1 for sanity check
   FnameOut = [Job.EpiDname, filesep, 'rmmeanua',Job.EpiPrefix,Ext];
-  Job_ = Job;
-  Job_.FnameEpi = [Job.EpiDname, filesep, 'ua',Job.EpiPrefix,Ext];
+  Job_ = [];
+  %Job;
+  Job_.fname_t1w = Job.FnameT1w;
+  Job_.fname_epi = [Job.EpiDname, filesep, 'ua',Job.EpiPrefix,Ext];
   if ~isfile(FnameOut)
     logthis('Coreg EPI to T1w using SPM12..\n')
     myspm_coreg_hdr(Job_);
     logthis('File created: '); ls(FnameOut)
   end
-  
 else  
   % RIGID from EPI to T1w
   Job_ = [];
-  Job_.fname_moving = Job.FnameEpiUnbiased;  % bias-corrected EPI
+  Job_.fname_moving = Job.FnameEpiBm;  % bias-corrected (skull-stripped)  EPI
   Job_.fname_fixed  = Job.FnameT1wBm;  % bias-corrected (skull-stripped) T1w
   Job_.reg_stages = 0;
   FnameOut = fullfile(Job.EpiDname, ...
-    ['mmeanua',Job.EpiPrefix,'_to_bm',Job.T1wPrefix,'_stage0_Composite.h5']);
+    ['bmmeanua',Job.EpiPrefix,'_to_bm',Job.T1wPrefix,'_stage0_Composite.h5']);
   if ~isfile(FnameOut)
     logthis('Coreg EPI to T1w using ANTs..\n')
     myants_antsRegistration(Job_);
     logthis('File created: '); ls(FnameOut)
   end
-  
 end
 
 
@@ -321,11 +325,9 @@ else
   Job.FnameMniLow = fullfile(Job.EpiDname, 'mni_funcref.nii');
   if ~isfile(Job.FnameMniLow)
     % reslice
-    fname_mni = fullfile(getenv('FSLDIR'), ...
-      'data', 'standard', 'MNI152_T1_1mm_brain.nii.gz');
+    fname_mni = fullfile(getenv('FSLDIR'), 'data', 'standard', 'MNI152_T1_1mm_brain.nii.gz');
     % NOTE: both MNI152_T1_1mm and MNI152_T1_1mm_brain are in [182x218x182]
-    system(['mri_convert -vs ',num2str(Job.Vox_mm),...
-      ' ',fname_mni,' ',Job.FnameMniLow])
+    system(['mri_convert -vs ',num2str(Job.Vox_mm),' ',fname_mni,' ',Job.FnameMniLow])
     % bounding-box
     if isfield(Job,'Bbox_mm') && ~isempty(Job.Bbox_mm)
       myspm_boundingbox(Job.FnameMniLow, Job.Bbox_mm, Job.FnameMniLow);
@@ -336,15 +338,11 @@ else
   end
   
   % COMBINE TRANSFORMS
-  FnWarp = [Job.T1wDname, filesep, ...
-    'mmeanua',Job.EpiPrefix,'_to_mni_Warping.nii.gz'];
-  FnReg_epi_to_t1w = [Job.EpiDname, filesep, ...
-    'mmeanua',Job.EpiPrefix,'_to_bm',Job.T1wPrefix,'_stage0_Composite.h5'];
-  FnReg_t1w_to_mni = [Job.T1wDname, filesep, ...
-    'bm',Job.T1wPrefix,'_to_MNI152_T1_1mm_brain_stage2_Composite.h5'];
-  Job_ = struct('FnameOut',FnWarp, ...
-    'FnameFixed',Job.FnameMniLow, ...
-    'Transforms',{{FnReg_epi_to_t1w,0; FnReg_t1w_to_mni,0}});
+  FnWarp = [Job.T1wDname, filesep, 'bmmeanua',Job.EpiPrefix,'_to_mni_Warping.nii.gz'];
+  FnReg_epi_to_t1w = [Job.EpiDname, filesep, 'bmmeanua',Job.EpiPrefix,'_to_bm',Job.T1wPrefix,'_stage0_Composite.h5'];
+  FnReg_t1w_to_mni = [Job.T1wDname, filesep, 'bm',Job.T1wPrefix,'_to_MNI152_T1_1mm_brain_stage2_Composite.h5'];
+  Job_ = struct( ...
+    'FnameOut',FnWarp, 'FnameFixed',Job.FnameMniLow, 'Transforms',{{FnReg_epi_to_t1w,0; FnReg_t1w_to_mni,0}});
   if ~isfile(FnWarp)
     logthis('Combining two level transforms in ANTs..\n')
     myants_combinetransforms(Job_);
@@ -353,10 +351,8 @@ else
   
   % APPLY ON TIMESERIES
   Job.EpiNorm = [Job.EpiDname, filesep, 'xua',Job.EpiPrefix,Ext];
-  Job_ = struct(...
-    'FnameMoving',[Job.EpiDname, filesep, 'ua',Job.EpiPrefix,Ext], ...
-    'FnameFixed',Job.FnameMniLow, 'Transforms',{{FnWarp,0}}, ...
-    'FnameOut',Job.EpiNorm);
+  Job_ = struct('FnameMoving',[Job.EpiDname, filesep, 'ua',Job.EpiPrefix,Ext], 'FnameFixed',Job.FnameMniLow, ...
+    'Transforms',{{FnWarp,0}}, 'FnameOut',Job.EpiNorm);
   if ~isfile(Job.EpiNorm)
     logthis('Resampling EPI in MNI152 using ANTs..\n')
     myants_antsApplyTransformsTimeseries(Job_);
@@ -368,8 +364,7 @@ end
 
 %% (7). Smoothing
 if not(isempty(Job.Fwhm_mm))
-  FnameOut = strrep(Job.EpiNorm, [Job.EpiDname, filesep], ...
-    [Job.EpiDname, filesep, 's',num2str(Job.Fwhm_mm(1))]);
+  FnameOut = strrep(Job.EpiNorm, [Job.EpiDname, filesep], [Job.EpiDname, filesep, 's',num2str(Job.Fwhm_mm(1))]);
   if ~isfile(FnameOut)
     logthis('Spatial smoothing: FWHM=[%g] mm\n', Job.Fwhm_mm);
     myspm_smooth(struct('fname',Job.EpiNorm, 'fwhm_mm',Job.Fwhm_mm));

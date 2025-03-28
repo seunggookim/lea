@@ -1,5 +1,9 @@
 function [stat, cfg] = myft_permt2(dat,group,cov)
-% [s, cfg] = myft_permt2(y,group,cov)
+% [stat, cfg] = myft_permt2(dat, group, cov)
+%
+% dat   [(N1+N2) x P]
+% group [(N1+N2) x 1]
+% cov   [(N1+N2) x K]
 
 nSubj = numel(group);
 if size(dat,2) ~= nSubj

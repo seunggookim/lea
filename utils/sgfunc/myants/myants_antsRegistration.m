@@ -6,7 +6,7 @@ function JOB = myants_antsRegistration(JOB)
 %  .fname_moving
 % (.dname_out)        [default: path of fname_moving]
 % (.reg_stages)       0=rigid, 1=+affine, 2=+SyN [default]
-% (.interpolation)    'linear' | 'NearestNeighbor' | 'BSpline[<order=3>]' | 
+% (.interpolation)    'linear' [default] | 'NearestNeighbor' | 'BSpline[<order=3>]' | 
 %                     'LanczosWindowedSinc' | and more...
 % (.reg_SyNtransform) 'SyN[0.1,3,0]' for inter-subject reg [default]
 %                     'SyN[0.1,3,0.5]' for intra-subject reg

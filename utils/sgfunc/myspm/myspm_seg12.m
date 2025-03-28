@@ -1,4 +1,4 @@
-function JOB=myspm_seg12(JOB,runmode)
+function Job=myspm_seg12(Job,runmode)
 % JOB=myspm_seg12(JOB, [runmode]) runs SPM12 segmentation
 %
 % JOB requires:
@@ -18,63 +18,40 @@ function JOB=myspm_seg12(JOB,runmode)
 ver = spm('version');
 if ~strcmp(ver(4:5),'12'), error('This function is for SPM12!'); end
 if nargin == 0, help(mfilename); return; end
-if ~isstruct(JOB) && ischar(JOB), JOB=struct('fname_t1w',JOB); end
-if ~isfield(JOB,'ismp2rage'), JOB.ismp2rage=0; end
-if ~isfield(JOB,'iseastern'), JOB.iseastern=0; end
-[p2,f2,e2]=myfileparts(JOB.fname_t1w);
+if ~isstruct(Job) && ischar(Job), Job=struct('fname_t1w',Job); end
+if ~isfield(Job,'ismp2rage'), Job.ismp2rage=0; end
+if ~isfield(Job,'iseastern'), Job.iseastern=0; end
+[p2,f2,e2]=myfileparts(Job.fname_t1w);
 dir_tpm=[spm('dir'),filesep,'tpm'];
-if ~isfield(JOB,'norm'), JOB.norm=0; end
+if ~isfield(Job,'norm'), Job.norm=0; end
 if exist('runmode','var')
   switch runmode
     case {'ss'}
-      JOB.mw=zeros(1,6);
-      JOB.norm=1;
+      Job.mw = zeros(1,6);
+      Job.norm = 1;
+      Job.native = ones(1,6);
   end
 end
 
 preproc=[];
-preproc.channel.vols={[JOB.fname_t1w,',1']};
-preproc.channel.biasreg=0.001;
-preproc.channel.biasfwhm=60;
+preproc.channel.vols={[Job.fname_t1w,',1']};
 preproc.channel.write=[0 1];
-preproc.tissue(1).tpm={[dir_tpm,filesep,'TPM.nii,1']};
-preproc.tissue(1).ngaus=1;
-preproc.tissue(1).native=[1 0];
-preproc.tissue(1).warped=[0 1];
-preproc.tissue(2).tpm={[dir_tpm,filesep,'TPM.nii,2']};
-preproc.tissue(2).ngaus=1;
-preproc.tissue(2).native=[1 0];
-preproc.tissue(2).warped=[0 1];
-preproc.tissue(3).tpm={[dir_tpm,filesep,'TPM.nii,3']};
-preproc.tissue(3).ngaus=2;
-preproc.tissue(3).native=[1 0];
-preproc.tissue(3).warped=[0 1];
-preproc.tissue(4).tpm={[dir_tpm,filesep,'TPM.nii,4']};
-preproc.tissue(4).ngaus=3;
-preproc.tissue(4).native=[0 0];
-preproc.tissue(4).warped=[0 0];
-preproc.tissue(5).tpm={[dir_tpm,filesep,'TPM.nii,5']};
-preproc.tissue(5).ngaus=4;
-preproc.tissue(5).native=[0 0];
-preproc.tissue(5).warped=[0 0];
-preproc.tissue(6).tpm={[dir_tpm,filesep,'TPM.nii,6']};
-preproc.tissue(6).ngaus=2;
-preproc.tissue(6).native=[0 0];
-preproc.tissue(6).warped=[0 0];
-if isfield(JOB,'mw')
+
+
+if isfield(Job,'mw')
   for c=1:6
-    preproc.tissue(c).warped(2)=JOB.mw(c);
+    preproc.tissue(c).warped(2)=Job.mw(c);
   end
 end
-if isfield(JOB,'native')
+if isfield(Job,'native')
   for c=1:6
-    preproc.tissue(c).native(1)=JOB.native(c);
+    preproc.tissue(c).native(1)=Job.native(c);
   end
 end
 preproc.warp.mrf=1;
 preproc.warp.cleanup=1;
 preproc.warp.reg=[0 0.001 0.5 0.05 0.2];
-if JOB.iseastern
+if Job.iseastern
   preproc.warp.affreg='eastern';
 else
   preproc.warp.affreg='mni';
@@ -85,8 +62,8 @@ preproc.warp.write=[0 1];
 
 matlabbatch={};
 matlabbatch{1}.spm.spatial.preproc=preproc;
-ls(JOB.fname_t1w);
-if JOB.ismp2rage
+ls(Job.fname_t1w);
+if Job.ismp2rage
   fname_out=[p2,filesep,'b',f2,e2];
 else
   fname_out=[p2,filesep,'bm',f2,e2];
@@ -101,7 +78,7 @@ if ~exist(fname_out,'file')
     V=spm_vol_nifti([p2,filesep,'c',num2str(c),f2,e2]);
     [Y{c},~]=spm_read_vols(V);
   end
-  if JOB.ismp2rage
+  if Job.ismp2rage
     V=spm_vol_nifti([p2,filesep,'',f2,e2]);
   else
     V=spm_vol_nifti([p2,filesep,'m',f2,e2]);
@@ -120,7 +97,7 @@ if ~exist(fname_out,'file')
   end
 end
 
-if JOB.norm
+if Job.norm
   [p3,f3,e3] = myfileparts(fname_out);
   if ~exist([p3,filesep,'w',f3,e3],'file')
     job1 = [];

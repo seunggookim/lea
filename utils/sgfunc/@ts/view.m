@@ -18,7 +18,7 @@ function h = view(Ts, cmd)
 %
 % see also TS
 %
-% (CC4-BY) seung-goo.kim@ae.mpg.de
+% (CC4-BY) 2024-2025, seung-goo.kim@ae.mpg.de
 
 h = [];
 DataType = strsplit(Ts.Name,'-');
@@ -72,7 +72,9 @@ end
           info_.ImageSize = info_.ImageSize(1:3);
           info_.PixelDimensions = info_.PixelDimensions(1:3);
           Mri = struct(vol=zeros(info_.ImageSize, 'double'), info=info_);
-          [coef, scores, ~, ~, explained] = pca(Ts.Data, NumComponents=NUM_COMPO);
+          Data = double(Ts.Data);
+          Data(isnan(Data(:))) = mean(Data(:), 'omitnan');
+          [coef, scores, ~, ~, explained] = pca(Data, NumComponents=NUM_COMPO);
           for iComp = 1:NUM_COMPO
             img_ = zeros(Mri.info.ImageSize);
             img_(Mri.info.Mask(:)) = coef(:,iComp);

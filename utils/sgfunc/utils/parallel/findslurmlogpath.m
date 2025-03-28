@@ -1,18 +1,20 @@
-function [DnLog, JobId] = findslurmlogpath()
+function [dnLog, jobId] = findslurmlogpath()
 %FINDSLURMLOGPATH finds a next natural number for the name of SLURM log folder
 % [DnLog, JobId] = findslurmlogpath()
 
-DnTemp = fullfile(getenv('HOME'), 'slurm');
-if ~isfolder(DnTemp); mkdir(DnTemp); end
-Dirs = dir(fullfile(DnTemp, '*'));
-Dirs = Dirs([Dirs.isdir]);
-JobId = str2double(Dirs(end).name);
-if isnan(JobId)
-    JobId = 0; 
-else
-    JobId = JobId + 1;
+dnTemp = fullfile(getenv('HOME'), 'slurm');
+if not(isfolder(dnTemp))
+  mkdir(dnTemp)
 end
-DnLog = fullfile(DnTemp, sprintf('%03i', JobId));
-mkdir(DnLog)
-JobId = sprintf('%03i', JobId);
+Dirs = dir(fullfile(dnTemp, '*'));
+Dirs = Dirs([Dirs.isdir]);
+lastJobId = max(cell2mat(cellfun(@str2num, {Dirs.name}, uni=0)));
+if isempty(lastJobId)
+    jobId = 0; 
+else
+    jobId = lastJobId + 1;
+end
+jobId = num2str(jobId,'%04i');
+dnLog = fullfile(dnTemp, jobId);
+mkdir(dnLog);
 end

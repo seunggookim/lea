@@ -10,7 +10,7 @@ function job = myspm_glm(job)
 % (.dir_glm)     '1xN' directory to save SPM results
 % (.dir_prefix)  '1xN' prefix for GLM directory name
 %
-% -input files
+% -input files: (subjID AND files_query) OR (filenames)
 %  .subjID       [NxM] or {Nx1}
 %  .files_query  'Nx1' a query to find image filenames with "${subj}",
 %                 which will be replaced by .subjID
@@ -23,7 +23,7 @@ function job = myspm_glm(job)
 % (.masking)     '1xN' filename for an explicit (inclusive) mask
 %  .design       '1xN' GLM design: either multiple regression ('mreg')
 %                 or one-sample t-test ('t1') or paired t-test ('pt')
-%                 or flexible factorial
+%                 or flexible factorial ('flex')
 %
 % -factor specification for 'flex'
 %  .factors      (1xNcond)  .name (.dept) (.variance) (.gmsca) (.ancova)
@@ -37,9 +37,6 @@ function job = myspm_glm(job)
 %  .vi.name      'string' a name of interest
 %  .vn(c).val    [Nsubjx1] a vector of c-th nuissance variable
 %  .vn(c).name   'string' a name of c-th nuissance variable
-% or
-%  .model        <term> SurfStat term structure that describes a GLM
-%  .cidx         [1x1] 1-based index for the contrast of interest
 %
 % -for myspm_cntrst.m:
 % (.cntrstMtx)
@@ -81,8 +78,8 @@ function job = myspm_glm(job)
 % (cc) 2015. sgKIM.  mailto://solleo@gmail.com  https://ggooo.wordpress.com/
 
 if nargin == 0, help(mfilename); return; end
-if ~isfield(job,'overwrite'), job.overwrite=0; end
-overwrite=job.overwrite;
+% if ~isfield(job,'overwrite'), job.overwrite=0; end
+% overwrite=job.overwrite;
 if ~isfield(job,'design'),design = 'mreg'; else, design = job.design; end
 spm('Defaults','fmri')
 
@@ -225,13 +222,13 @@ end
 matlabbatch{1}.spm.stats.factorial_design.dir = {job.dir_glm};
 save([job.dir_glm,'/glm_design.mat'], 'matlabbatch');
 need2est = 1;
-if overwrite
-  unix(['rm -f ',job.dir_glm,'/SPM.mat']);
-else
+% if overwrite
+%   unix(['rm -f ',job.dir_glm,'/SPM.mat']);
+% else
   if exist([job.dir_glm,'/SPM.mat'],'file')
     need2est = 0;
   end
-end
+% end
 if need2est
   spm_jobman('initcfg')
   spm_jobman('run', matlabbatch)
@@ -244,9 +241,9 @@ matlabbatch = {};
 matlabbatch{1}.spm.stats.fmri_est.spmmat = {[job.dir_glm,'/SPM.mat']};
 matlabbatch{1}.spm.stats.fmri_est.method.Classical = 1;
 save([job.dir_glm,'/glm_estimation.mat'], 'matlabbatch');
-if overwrite || ~exist([job.dir_glm,'/beta_0001.nii'],'file')
+% if overwrite || ~exist([job.dir_glm,'/beta_0001.nii'],'file')
   spm_jobman('run', matlabbatch)
-end
+% end
 
 
 %% when required, create a NIFTI file before deleting ResI.*

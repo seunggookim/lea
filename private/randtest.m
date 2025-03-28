@@ -29,7 +29,7 @@ RandX = X;
 for iSet = 1:numel(X)
   RandX{iSet}.Data = randomize_phase(X{iSet}.Data);
 end
-Data = conformdata(RandX, Y, Job); % TODO: confirming Y is unnecessarily repeated
+Data = delaydata(RandX, Y, Job); % TODO: confirming Y is unnecessarily repeated
 [Cxx, Cxy] = findcov(Data);
 nPreds = size(Data(1).X, 2);
 nResps = size(Data(1).Y, 2);

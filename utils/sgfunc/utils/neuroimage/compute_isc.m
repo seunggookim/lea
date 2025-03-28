@@ -8,13 +8,13 @@ function [mR,R] = compute_isc(Y)
 
 [~, nvoxs, nsubs] = size(Y);
 R = nan([1 nvoxs nsubs], class(Y));
-fprintf('Computing ISC')
+% fprintf('Computing ISC')
 for isub = 1:nsubs
   mY = mean(Y(:,:,setdiff(1:nsubs, isub)),3);
   R(:,:,isub) = corrvec(mY, Y(:,:,isub));
-  fprintf('.')
+  % fprintf('.')
 end
-fprintf('\n')
+% fprintf('\n')
 mR = mean(R,3);
 end
 

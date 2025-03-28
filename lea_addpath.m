@@ -2,11 +2,17 @@ function lea_addpath(Job)
 %LEA_ADDPATH adds paths to access functions
 %   LEA_ADDPATH(Job)
 
+myPath = fileparts(mfilename('fullpath'));
+addpath(myPath)
+
+if not(exist('defaultjob','file'))
+  addpath(fullfile(myPath,'utils','sgfunc'))
+  sgfunc_addpath()
+end
+
 if not(exist('Job','var')), Job = []; end
 Job = defaultjob(struct(IsEeglab=false, IsFieldtrip=false, IsNsl=true, IsCnn=true), Job, mfilename, false);
 
-myPath = fileparts(mfilename('fullpath'));
-addpath(myPath)
 
 % MATLAB UTILITIES (INTERNAL & EXTRENAL)
 assert(exist('sgfunc_addpath','file'), 'SGFUNC not in MATLAB PATH!')
@@ -77,6 +83,18 @@ if Job.IsCnn
   addpath(genpath(matlabsupportdir))
 end
 
+%% for fMRI plotting
+fnMni = fullfile(myPath,'utils','standards','MNI152_T1_2mm_brain.nii.gz');
+if not(isfile(fnMni))
+  [~,~] = mkdir(fullfile(myPath,'utils','standards'));
+  websave(fnMni, 'https://git.fmrib.ox.ac.uk/fsl/data_standard/-/raw/master/MNI152_T1_2mm_brain.nii.gz');
+end
+
+
+%% for EEG plotting
+
+
+%%
 logthis('Halo! ^o^)/\n')
 
 end

@@ -14,10 +14,14 @@ if numel(varargin)>1 && strcmpi(varargin{end-1}, 'verbosity')
   end
 end
 
-DateStrNow = char(datetime('now'),'yyyy-MM-dd''T''HH:mm:ss');
+DateStrNow = char(datetime('now'),'yyyy-MM-dd''_''HH:mm:ss');
 % DateStrNow = char(datetime('now'),'yyyy-MM-dd HH:mm:ss');
 st = dbstack;
-callername = st(2).name;
+try
+  callername = st(2).name;
+catch
+  callername ='';
+end
 LineLength = fprintf('[%s|%s] %s', callername, DateStrNow, sprintf(varargin{:}));
 if ~nargout
   clear LineLength

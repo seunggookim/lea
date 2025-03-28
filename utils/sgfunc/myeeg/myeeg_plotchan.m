@@ -1,6 +1,6 @@
 function myeeg_plotchan(Colormap, Chanlocs)
 
-topoplot([], Chanlocs, 'style','blank', 'whitebk','on');
+topoplot([], Chanlocs);%, 'style','blank');%, 'whitebk','on');
 h = get(gca, 'Children');
 h(1).Visible = 'off';
 patch(h(5).XData, h(5).YData, 0, 'FaceColor','w');

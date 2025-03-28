@@ -21,7 +21,8 @@ setenv('LD_LIBRARY_PATH', LD_LIBRARY_PATH(1:end-1));
 %% UNPACKING
 tic;
 [DnOut,~,~] = myfileparts(Job.FnameOut);
-DnTempsrc = fullfile(DnOut, 'myantstmp', sprintf('%16i',rand*1e17));
+% DnTempsrc = fullfile(DnOut, 'myantstmp', sprintf('%16i',rand*1e17));
+DnTempsrc = fullfile(DnOut, 'myantstmp', java.util.UUID.randomUUID.char);
 mkdir(DnTempsrc)
 logthis('Unpacking the source file "%s" into a temporary directory "%s"...\n', Job.FnameMoving, DnTempsrc)
 system(sprintf('ImageMath 4 %s/.nii TimeSeriesDisassemble %s', DnTempsrc, Job.FnameMoving));
@@ -40,7 +41,8 @@ end
 %% Transform volume by volume
 files = dir(fullfile(DnTempsrc,'*.nii'));
 logthis('Now transforming each of %i images...\n', numel(files))
-DnTemptrg = fullfile(DnOut, 'myantstmp', sprintf('%16i',rand*1e17));
+% DnTemptrg = fullfile(DnOut, 'myantstmp', sprintf('%16i',rand*1e17));
+DnTemptrg = fullfile(DnOut, 'myantstmp', java.util.UUID.randomUUID.char);
 mkdir(DnTemptrg)
 counter = 0;
 nfiles = numel(files);

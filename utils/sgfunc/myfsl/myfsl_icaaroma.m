@@ -59,6 +59,7 @@ else % if ICA_AROMA.py is executable
     ' -mc ',job.fn_rp];
 end
 if isfield(job,'dryrun') && job.dryrun
+  disp(cmd);
   return
 end
 

@@ -1,4 +1,4 @@
-function JOB = myspm_cntrst (JOB)
+function Job = myspm_cntrst (Job)
 % creates CON and SPM images, to be used by MYSPM_GLM and MYSPM_FMRIGLM
 % and calls MYSPM_RESULT
 %
@@ -17,17 +17,17 @@ function JOB = myspm_cntrst (JOB)
 
 
 spm('defaults','fmri');
-if ~isfield(JOB,'effectOfInterest')
-  JOB.effectOfInterest = 1;
+if ~isfield(Job,'effectOfInterest')
+  Job.effectOfInterest = 1;
 end
-load([JOB.dir_glm,'/SPM.mat'],'SPM')
-if ~isfield(JOB,'isfmri')
-  JOB.isfmri = isfield(SPM,'Sess');
+load([Job.dir_glm,'/SPM.mat'],'SPM')
+if ~isfield(Job,'isfmri')
+  Job.isfmri = isfield(SPM,'Sess');
 end
 
 %% SET DEFAULT CONTRASTS (all regressors):
-if ~isfield(JOB,'cntrstMtx')
-  if JOB.isfmri % 1-level fmri GLM:
+if ~isfield(Job,'cntrstMtx')
+  if Job.isfmri % 1-level fmri GLM:
     nRegInt = [];
     for j = 1:numel(SPM.Sess)
       nRegInt(j) = numel(SPM.Sess(j).U);
@@ -36,29 +36,35 @@ if ~isfield(JOB,'cntrstMtx')
       error(['# of regressors of interest are various across sessions!'])
     end
     k = length(SPM.Sess(1).U);
-    JOB.cntrstMtx = [ones(1,k); -ones(1,k);
+    Job.cntrstMtx = [ones(1,k); -ones(1,k);
       kron(eye(k),[1 -1]')];
-    if ~isfield(JOB,'titlestr')
+    if ~isfield(Job,'titlestr')
       varnames = [SPM.Sess(1).U(:).name];
-      JOB.titlestr = {'+All','-All'};
+      Job.titlestr = {'+All','-All'};
       for i=1:numel(varnames)
-        JOB.titlestr = [JOB.titlestr, ['+',varnames{i}]];
-        JOB.titlestr = [JOB.titlestr, ['-',varnames{i}]];
+        Job.titlestr = [Job.titlestr, ['+',varnames{i}]];
+        Job.titlestr = [Job.titlestr, ['-',varnames{i}]];
       end
     end
   else % 2-level GLM:
-    [n, k] = size(SPM.xX.X);
-    JOB.cntrstMtx = kron([zeros(k-1,1) eye(k-1)],[1 -1]');
-    if ~isfield(JOB,'titlestr')
-      if ~isempty(SPM.xC)
-        varnames = {SPM.xC.rcname};
-      else
-        varnames= {'1'};
-      end
-      JOB.titlestr = {};
-      for i=1:numel(varnames)
-        JOB.titlestr = [JOB.titlestr, ['+',varnames{i}]];
-        JOB.titlestr = [JOB.titlestr, ['-',varnames{i}]];
+
+    if numel(SPM.xX.iH)==2 % paired t-test
+      Job.cntrstMtx = [1 -1; -1 1];
+      Job.titlestr = {'Cnt1>Cnt2', 'Cnt1<Cnt2'};
+    else
+      [n, k] = size(SPM.xX.X);
+      Job.cntrstMtx = kron([zeros(k-1,1) eye(k-1)],[1 -1]');
+      if ~isfield(Job,'titlestr')
+        if ~isempty(SPM.xC)
+          varnames = {SPM.xC.rcname};
+        else
+          varnames= {'1'};
+        end
+        Job.titlestr = {};
+        for i=1:numel(varnames)
+          Job.titlestr = [Job.titlestr, ['+',varnames{i}]];
+          Job.titlestr = [Job.titlestr, ['-',varnames{i}]];
+        end
       end
     end
   end
@@ -67,44 +73,44 @@ end
 %% SET T-contrasts:
 matlabbatch={};
 con=[];
-con.spmmat = {fullfile(JOB.dir_glm, 'SPM.mat')};
-if ~isfield(JOB,'NumSess')
+con.spmmat = {fullfile(Job.dir_glm, 'SPM.mat')};
+if ~isfield(Job,'NumSess')
   try
-    JOB.NumSess = numel(SPM.Sess);
+    Job.NumSess = numel(SPM.Sess);
   catch
-    JOB.NumSess = 1;
+    Job.NumSess = 1;
   end
 end
-NumSess = JOB.NumSess;
-if isfield(JOB,'cntrstMtx')
-  NumCnt = size(JOB.cntrstMtx,1);
+NumSess = Job.NumSess;
+if isfield(Job,'cntrstMtx')
+  NumCnt = size(Job.cntrstMtx,1);
   for k=1:NumCnt
-    if isfield(JOB,'titlestr')
-      con.consess{k}.tcon.name = JOB.titlestr{k};
+    if isfield(Job,'titlestr')
+      con.consess{k}.tcon.name = Job.titlestr{k};
     else
       con.consess{k}.tcon.name = ['Contrast#',num2str(k)];
     end
-    con.consess{k}.tcon.convec = JOB.cntrstMtx(k,:);
+    con.consess{k}.tcon.convec = Job.cntrstMtx(k,:);
     if NumSess>1
       con.consess{k}.tcon.sessrep = 'repl';
     else
       con.consess{k}.tcon.sessrep = 'none';
     end
-    if isfield(JOB,'sessrep')
-      con.consess{k}.tcon.sessrep=JOB.sessrep;
+    if isfield(Job,'sessrep')
+      con.consess{k}.tcon.sessrep=Job.sessrep;
     end
   end
 end
 
 
 %% Effect of interest
-if JOB.effectOfInterest
-  if ~isfield(JOB,'FcntrstMtx')
-    JOB.FcntrstMtx={};
-    JOB.Ftitlestr={};
+if Job.effectOfInterest
+  if ~isfield(Job,'FcntrstMtx')
+    Job.FcntrstMtx={};
+    Job.Ftitlestr={};
   end
-  JOB.Ftitlestr = [JOB.Ftitlestr 'Effect of interest'];
-  if JOB.isfmri
+  Job.Ftitlestr = [Job.Ftitlestr 'Effect of interest'];
+  if Job.isfmri
     for j = 1:numel(SPM.Sess)
       nRegInt(j) = numel(SPM.Sess(j).U); % number of regressors of interest
       nxBForder = size(SPM.xBF.bf,2); % order of the response function
@@ -122,7 +128,7 @@ if JOB.effectOfInterest
 %         = [eye(nRegInt(j)*nxBForder) zeros(nRegInt(j)*nxBForder,nRegNsn(j))];
 %     end
     eoicont = eye(nRegInt(j)*nxBForder);
-    JOB.FcntrstMtx = [JOB.FcntrstMtx; eoicont];
+    Job.FcntrstMtx = [Job.FcntrstMtx; eoicont];
   else % 2nd-level or higher
     warning('THINK ABOUT EFFECT of INTEREST for 2-level ANALYSIS is USEFUL!')
   end
@@ -130,33 +136,33 @@ end
 
 
 %% SET F-contrasts
-if isfield(JOB,'FcntrstMtx')
+if isfield(Job,'FcntrstMtx')
   k = NumCnt;
-  for j=1:numel(JOB.FcntrstMtx)
+  for j=1:numel(Job.FcntrstMtx)
     k = k + 1;
-    con.consess{k}.fcon.name = JOB.Ftitlestr{j};
-    con.consess{k}.fcon.convec = JOB.FcntrstMtx{j};
+    con.consess{k}.fcon.name = Job.Ftitlestr{j};
+    con.consess{k}.fcon.convec = Job.FcntrstMtx{j};
     if NumSess>1
       con.consess{k}.fcon.sessrep = 'repl';
     else
       con.consess{k}.fcon.sessrep = 'none';
     end
-    if isfield(JOB,'sessrep')
-      con.consess{k}.fcon.sessrep=JOB.sessrep;
+    if isfield(Job,'sessrep')
+      con.consess{k}.fcon.sessrep=Job.sessrep;
     end
   end
 end
 
 
 %% CLEAR previous results:
-if isfield(JOB,'newContrast')
-  con.delete = JOB.newContrast;
+if isfield(Job,'newContrast')
+  con.delete = Job.newContrast;
 else
   con.delete = 1;
 end
 if con.delete == 1
-  unix(['rm -f ',JOB.dir_glm,'/con*']);
-  unix(['rm -f ',JOB.dir_glm,'/sigclus*']);
+  unix(['rm -f ',Job.dir_glm,'/con*']);
+  unix(['rm -f ',Job.dir_glm,'/sigclus*']);
 end
 matlabbatch{1}.spm.stats.con = con;
 
@@ -167,14 +173,14 @@ spm_jobman('run', matlabbatch)
 
 
 %% Now create result reports
-JOB.mygraph.y_name = 'y';
-JOB.mygraph.x_name = 'x';
-if ~isfield(JOB,'thres')
-  JOB.thres.desc  = 'cluster';
-  JOB.thres.alpha = 0.05;
+Job.mygraph.y_name = 'y';
+Job.mygraph.x_name = 'x';
+if ~isfield(Job,'thres')
+  Job.thres.desc  = 'cluster';
+  Job.thres.alpha = 0.05;
 end
-if ~isfield(JOB,'NOREPORT') && ~isfield(JOB,'noreport')
-  JOB = myspm_result(JOB);
+if ~isfield(Job,'NOREPORT') && ~isfield(Job,'noreport')
+  Job = myspm_result(Job);
 else
 %   myps2pdf(JOB.fname_spm_fig)
 end

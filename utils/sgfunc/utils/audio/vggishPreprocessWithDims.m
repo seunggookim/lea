@@ -1,6 +1,6 @@
-function [features, T_sec] = vggishPreprocessWithDims(audioIn,fs,varargin)
+function [features, F_Hz, T_sec] = vggishPreprocessWithDims(audioIn,fs,varargin)
 %VGGISHPREPROCESS Preprocess audio for VGGish feature extraction 
-%   [features, TimeImage_sec] = vggishPreprocess(audioIn,fs) generates mel spectrograms from
+%   [features, FreqImage_Hz, TimeImage_sec] = vggishPreprocess(audioIn,fs) generates mel spectrograms from
 %   the audio input, audioIn, that can be fed to the VGGish pretrained
 %   network. fs is the sampling rate, in Hz. features is returned as a
 %   96-by-64-by-1-by-N array, where 96 is the number of time hops, 64 is
@@ -113,7 +113,7 @@ for index=1:c
     features(:,:, :,(index-1)*numHops/c + 1:index*numHops/c ) = Z2;
 end
 
-%F_Hz = FreqHz;
+F_Hz = FreqHz;
 T2 = audio.internal.buffer(T,frameLength,frameHopLength);
 T_sec = median(T2)/fs0;
 assert(numel(T_sec) == size(features,4))

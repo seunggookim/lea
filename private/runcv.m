@@ -12,10 +12,10 @@ function Mdl = runcv(X, Y, Job)
 %   beaHat:  A matrix (nFolds x nPredictors x nResponses)
 
 tic
-Data = conformdata(X, Y, Job);
-logthis('data conformed!\n')
+Data = delaydata(X, Y, Job);
+logthis('FIR regressors constructed!\n', verbosity=Job.IsVerbose)
 [Cxx, Cxy] = findcov(Data);
-logthis('covariances found!\n')
+logthis('covariances found!\n', verbosity=Job.IsVerbose)
 nPreds = size(Data(1).X, 2);
 nResps = size(Data(1).Y, 2);
 
@@ -27,13 +27,13 @@ elseif isnumeric(Job.CvDesign) && numel(Job.CvDesign)==2
 else
   error WHAT_ELSE?
 end
-logthis('cvpartition set!\n')
+logthis('cvpartition set!\n', verbosity=Job.IsVerbose)
 
 lambdaOpt = nan(Cv.NumTestSets, nResps);
 predAcc = zeros(Cv.NumTestSets, nResps);
 betaHat = zeros(Cv.NumTestSets, nPreds, nResps);
 
-logthis('READY for OUTER LOOP!\n')
+logthis('READY for OUTER LOOP!\n', verbosity=Job.IsVerbose)
 for iOuter = 1:Cv.NumTestSets
   idxTest = find(test(Cv, iOuter));
   idxTrain = find(training(Cv, iOuter));
@@ -47,15 +47,15 @@ for iOuter = 1:Cv.NumTestSets
   end
 
   % find optimal lambda via inner loop:
-  logthis('iOuter=%i, READY TO OPTIMIZE!\n', iOuter)
+  logthis('iOuter=%i, READY TO OPTIMIZE!\n', iOuter, verbosity=Job.IsVerbose)
   [lambdaOpt(iOuter,:)] = optimize({Data(idxTrain).X}, {Data(idxTrain).Y}, CxxTrain, CxyTrain, Job);
-  logthis('iOuter=%i, OPTIMIZED!\n', iOuter)
+  logthis('iOuter=%i, OPTIMIZED!\n', iOuter, verbosity=Job.IsVerbose)
 
   % predict test responses (averaged across test sets):
   for j = 1:numel(idxTest)
-    logthis('iOuter=%i, iInner=%i, READY TO EVALUATE!\n',iOuter, j)
+    logthis('iOuter=%i, iInner=%i, READY TO EVALUATE!\n',iOuter, j, verbosity=Job.IsVerbose)
     [predAcc_, betaHat_] = evaluate(Data(idxTest(j)).X, Data(idxTest(j)).Y, CxxTrain, CxyTrain, lambdaOpt(iOuter,:));
-    logthis('iOuter=%i, iInner=%i, EVALUTED!\n', iOuter, j)
+    logthis('iOuter=%i, iInner=%i, EVALUTED!\n', iOuter, j, verbosity=Job.IsVerbose)
     predAcc(iOuter,:) = predAcc(iOuter,:) + predAcc_;
     betaHat(iOuter,:,:) = betaHat(iOuter,:,:) + permute(betaHat_,[3 1 2]); % PERMUTE to add a leading singleton
     clear *_

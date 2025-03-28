@@ -4,9 +4,9 @@ global DN_PROJ
 DnProgress = [DN_PROJ,'/meta/prolific-progress/'];
 DnDone = [DnProgress,'/sequencesDone'];
 [~,~] = mkdir(DnDone);
-DnProc = [DN_PROJ,'/local/prolific-data/proc/'];
-fnameDemo = findfiles([DN_PROJ,'/local/prolific-data/raw/%s/*.csv'], rawPathToRead);
-fnameResults = findfiles([DN_PROJ,'/local/prolific-data/raw/%s/*.txt'], rawPathToRead);
+DnProc = [DN_PROJ,'/data/prolific-data/proc/'];
+fnameDemo = findfiles([DN_PROJ,'/data/prolific-data/raw/%s/*.csv'], rawPathToRead);
+fnameResults = findfiles([DN_PROJ,'/data/prolific-data/raw/%s/*.txt'], rawPathToRead);
 fnameDemo = fnameDemo{1};
 
 fnameDone = [DnProgress,'/done.mat'];
