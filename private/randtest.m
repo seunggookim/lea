@@ -55,7 +55,7 @@ for iOuter = 1:numel(Data)
 
   % predict test responses (averaged across test sets):
   for j = 1:numel(idxTest)
-    [predAcc_, betaHat_] = evaluate(Data(idxTest(j)).X, Data(idxTest(j)).Y, CxxTrain, CxyTrain, lambdaOpt(iOuter,:));
+    [predAcc_, betaHat_] = evaluate(Data(idxTest(j)).X, Data(idxTest(j)).Y, CxxTrain, CxyTrain, Mdl.Lopt(iOuter,:));
     predAcc(iOuter,:) = predAcc(iOuter,:) + predAcc_;
     if Job.IsKeepRandBetaHat
       betaHat(iOuter,:,:) = betaHat(iOuter,:,:) + permute(betaHat_,[3 1 2]); % PERMUTE to add a leading singleton

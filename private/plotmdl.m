@@ -20,6 +20,10 @@ switch MODALITY
     INFO = Y{1}.UserData;
     FIG_POS = [600 250];
     axesLayout = axeslayout([1 3]);
+  case 'toy'
+    % INFO = Y{1}.UserData;
+    FIG_POS = [600 600];
+    % axesLayout = axeslayout([1 3]);
 end
 colors = get_colormap(3,1);
 cmapR = flipud([linspacevec(colors(1,:), [1 1 1], 128); linspacevec([1 1 1], colors(3,:), 128)]);
@@ -69,10 +73,10 @@ logthis('Figure saved: '); ls(fnPdf)
 
 
 
-%% Additional: if the randomization test is computed:
-if not(isempty(Rnd))
-  error('Now create this!')
-end
+%% TODO: if the randomization test is computed:
+% if not(isempty(Rnd))
+%   error('Now create this!')
+% end
 
 
 %% NESTED HELPER FUNCTIONS
@@ -217,7 +221,9 @@ end
 
 
   function drawtoy()
-    figure(Colormap = flipud(brewermap(256,'Spectral')) );
+    Data = delaydata(X, Y, Job);
+
+    set(gcf, Colormap = flipud(brewermap(256,'Spectral')) );
     AxesPos = axeslayout([3 3]);
 
     axespos(AxesPos,1); imagesc(X{1}.Data); colorbar;
