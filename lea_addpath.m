@@ -11,7 +11,8 @@ if not(exist('defaultjob','file'))
 end
 
 if not(exist('Job','var')), Job = []; end
-Job = defaultjob(struct(IsEeglab=false, IsFieldtrip=false, IsNsl=true, IsCnn=true), Job, mfilename, false);
+Job = defaultjob(struct(IsEeglab=false, IsFieldtrip=false, IsNsl=false, IsCnn=false, IsDownloadData=false), ...
+  Job, mfilename, false);
 
 
 % MATLAB UTILITIES (INTERNAL & EXTRENAL)
@@ -91,8 +92,17 @@ if not(isfile(fnMni))
 end
 
 
-%% for EEG plotting
-
+%% Demo data
+if Job.IsDownloadData
+  urlData = 'https://zenodo.org/records/15103708/files/data.zip';
+  fnZip = tempname;
+  fprintf('Downloading preprocssed data🍱...'); tic
+  websave(fnZip, urlData);
+  fprintf('DONE: took %s\n', char(duration(seconds(toc), Format='hh:mm:ss.SSS')))
+  unzip(fnZip, myPath)
+  fprintf('Unzipped: %s/data \n',myPath); ls(fullfile(myPath,'data'))
+  cd(myPath) % I'll bring you to where you can run the demo script
+end
 
 %%
 logthis('Halo! ^o^)/\n')
