@@ -4,7 +4,7 @@
 
 This MATLAB🏔️ package is to perform linearized encoding analysis on time series data (see [Kim, 2022, Frontiers in Neuroscience](https://doi.org/10.3389/fnins.2022.928841)).
 
-This version (v0.0.1-alpha-20250329) is for a new preprint: Kim. (2025). Reverse Double-Dipping: When Data Dips You, Twice—Stimulus-Driven Information Leakage in Naturalistic Neuroimaging. [[bioRxiv]]() 
+This version (v0.0.1-alpha-20250329) is for a new preprint: Kim. (2025). Reverse Double-Dipping: When Data Dips You, Twice—Stimulus-Driven Information Leakage in Naturalistic Neuroimaging. [[bioRxiv]](https://doi.org/10.1101/2025.04.01.646146) 
 
 Please see `/README.mlx` on MATLAB to learn more about it.
 
