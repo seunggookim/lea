@@ -16,12 +16,18 @@ FldNames = fieldnames(DefaultJob);
 for iFld = 1:numel(FldNames)
   if ~isfield(Job, FldNames{iFld})
     value = DefaultJob.(FldNames{iFld});
-
     if IsVerbose
       fprintf('%s(DEFAULT) Job.%s = ', ProcName, FldNames{iFld})
-      disp(value);
+      if numel(value) > 10
+        fprintf('<%s %i x %i> ...', class(value), size(value))
+        disp(value(end-5:end)); 
+      else
+        disp(value);
+      end
+      if not(contains(class(value), {'string','char'}))
+        fprintf('\b')
+      end
     end
-
     Job.(FldNames{iFld}) = value;
   end
 end
