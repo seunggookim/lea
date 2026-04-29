@@ -37,7 +37,8 @@ end
 
 %% Create runme.sh
 FnameSh = fullfile(DnTemp,'runme.sh');
-DefaultCfg = struct('Partition','octopus', 'CpuPerTask',1, 'nTasks',1, 'Mem_GB',5, 'IsWait',true, 'Switch','');
+DefaultCfg = struct('Partition','octopus', 'CpuPerTask',1, 'nTasks',1, 'Mem_GB',5, 'IsWait',true, 'Time','14-0:00',...
+  'Switch','');
 Cfg = defaultcfg(DefaultCfg, Cfg, mfilename);
 fprintf('\n')
 
@@ -52,7 +53,8 @@ fprintf(fid, '#SBATCH --partition=%s\n', Cfg.Partition);
 fprintf(fid, '#SBATCH --ntasks=%i\n', Cfg.nTasks);
 fprintf(fid, '#SBATCH --cpus-per-task=%i\n', Cfg.CpuPerTask);
 fprintf(fid, '#SBATCH --mem=%iG\n', Cfg.Mem_GB);
-fprintf(fid, '#SBATCH -t 14-0:00 %s\n', Cfg.Switch); % time limit: 14 days
+fprintf(fid, '#SBATCH --time=%s\n', Cfg.Time);
+fprintf(fid, '#SBATCH %s\n', Cfg.Switch); % additional switches
 fprintf(fid, '%s\n', InitSh);
 fprintf(fid, [...
   'matlab -nodisplay -r "%s; ',...           % open MATLAB

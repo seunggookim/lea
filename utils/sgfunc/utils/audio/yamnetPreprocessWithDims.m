@@ -37,4 +37,4 @@ function varargout = yamnetPreprocessWithDims(audioIn,fs,varargin)
 
 narginchk(2, 4);
 
-[varargout{1:2}] = vggishPreprocessWithDims(audioIn,fs,'LogAdditiveElement',1e-3, varargin{:});
+[varargout{1:3}] = vggishPreprocessWithDims(audioIn,fs,'LogAdditiveElement',1e-3, varargin{:});

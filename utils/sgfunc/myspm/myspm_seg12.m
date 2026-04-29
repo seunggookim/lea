@@ -16,7 +16,7 @@ function Job=myspm_seg12(Job,runmode)
 % (cc) 2017, sgKIM, solleo@gmail.com
 
 ver = spm('version');
-if ~strcmp(ver(4:5),'12'), error('This function is for SPM12!'); end
+% if ~strcmp(ver(4:5),'12'), error('This function is for SPM12!'); end
 if nargin == 0, help(mfilename); return; end
 if ~isstruct(Job) && ischar(Job), Job=struct('fname_t1w',Job); end
 if ~isfield(Job,'ismp2rage'), Job.ismp2rage=0; end

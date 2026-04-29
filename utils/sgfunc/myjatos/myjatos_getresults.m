@@ -1,32 +1,29 @@
 function Job = myjatos_getresults(Job)
-%MYJATOS_DEPLOY deploys an experiment from a local JATOS server to a remote JATOS server
+%MYJATOS_GETRESULTS download results
 %
 % Job = myjatos_deploy(Job)
 %
 % Job [1x1] structure contains:
 % .ServerUrl  '1xN' upto 'jatos'  e.g., 'https://cortex.jatos.org'
 % .ServerKey  '1xN'
-% .StudyDesc  [1x1] structure contains:
+% .StudyDesc  [1x1] structure contains: (API-recognizable)
 %  (.studyIds)
 %  (.componentIds)
 %  (.batchIds)
+% .StudyUuid  '1xN' to double-check
+% .DnameData  '1xN'
 %
-% (CC0) seung-goo.kim@ae.mpg.de
+% (CC4 NC-BY-SA) seung-goo.kim@ae.mpg.de
 %
 % SEE ALSO https://github.com/JATOS/JATOS/blob/main/jatos-api.yaml
 
-
 %{
-TODO
+UPDATES:
 
-- [ ] where is "66cc4977d950a611854c62e1" ?? 
-  + I manually downloaded this result. But now I cannot find it from the MPIEA server. why?
+[2025-07-18] Now JsPsych result conforms the JSON format.
 
 %}
 global DN_PROJ
-
-Job.StudyDesc = defaultjob(struct(studyIds=[], componentIds=[], batchIds=[]), Job.StudyDesc, mfilename);
-
 
 API_PATH = '/jatos/api/v1';
 import matlab.net.*
@@ -37,11 +34,11 @@ import matlab.net.http.io.*
 Job.ServerUrl(end) = strrep(Job.ServerUrl(end),'/','');
 
 
-%% DOWNLOAD RESULTS FROM THE SERVER
+%% DOWNLOAD EVERYTHING FROM THE SERVER
 headers = [
-    HeaderField('Authorization', ['Bearer ',Job.ServerKey])
-    HeaderField('Content-Type', 'application/json')
-    ]';
+  HeaderField('Authorization', ['Bearer ',Job.ServerKey])
+  HeaderField('Content-Type', 'application/json')
+  ]';
 options = weboptions('HeaderFields', headers, 'MediaType', 'application/json', 'Timeout', 60);
 uri = URI([Job.ServerUrl,API_PATH,'/results']);
 response = webwrite(uri, jsonencode(Job.StudyDesc), options);
@@ -53,88 +50,65 @@ fileID = fopen(fnameZip, 'wb');
 fwrite(fileID, response);
 fclose(fileID);
 fnames = unzip(fnameZip, dnameTemp);
-logthis('Downloaded [%i] component RESULTS.\n', numel(fnames)-1)
-% StudyResult1 = [CompoResult1, CompoResult2[reloaded], ...], so I take 0 or 1 componentRes from 1 studyRes.
-% API issue??
+logthis('Downloaded [%i] Component Results.\n', numel(fnames)-1)
 
 serverPath = strrep(strrep(Job.ServerUrl,'http://',''),'https://','');
 dnameRaw = [DN_PROJ,'/local/jatos-data/',serverPath];
-[~,~] = mkdir(dnameRaw);
-[flag] = system(['rsync -azu ',dnameTemp,'/ ',dnameRaw,'/'])
-assert(flag==0)
+if not(isfolder(dnameRaw)), mkdir(dnameRaw); end
+[flag] = system(['rsync -azu ',dnameTemp,'/ ',dnameRaw,'/']);
+assert(flag==0, 'RSYNC FAILED')
 logthis('copied to: %s\n', dnameRaw)
 ls(dnameRaw)
 
-%% Copy data into Prolific folders based on Prolific ID
-Meta = jsondecode(fileread([dnameRaw,'/metadata.json']));
-disp(Meta.data)
-indices = num2cell(1:numel(Meta.data.studyResults));
+%% FIND .ONLY "FINISHED" RESULTS
+metaJson = jsondecode(fileread([dnameRaw,'/metadata.json']));
+assert( isequal(Job.StudyUuid, metaJson.data.studyUuid), 'studyUuid not matched!' )
 
-if not(isempty(Job.StudyDesc.batchIds))
-  isThisBatch = cellfun(@(x) ismember(Job.StudyDesc.batchIds, Meta.data.studyResults{x}.batchId), indices);
-else
-  isThisBatch = true(1,numel(Meta.data.studyResults));
+studyStates = string(cellfun(@(x) x.studyState, metaJson.data.studyResults, 'UniformOutput', false));
+resultIds = string(cellfun(@(x) x.id, metaJson.data.studyResults, 'UniformOutput', false));
+idxFinished = find(studyStates == "FINISHED");
+if isempty(idxFinished)
+  return
 end
-isFinished = cellfun(@(x) isequal(Meta.data.studyResults{x}.componentResults.componentState, 'FINISHED'), indices);
+if not(isfolder(Job.DnameData)), mkdir(Job.DnameData); end
 
-FilesToCheck = cellfun(@(x) Meta.data.studyResults{x}.componentResults.path, indices, uniform=false);
-FilesToCheck = FilesToCheck(isFinished & isThisBatch);
-logthis('Found %i FINISHED component results.\n', numel(FilesToCheck))
-
-PPIDs = {};
-for iResult = 1:numel(FilesToCheck)
+%% WEED OUT JSON-conforming results with a VALID morlaId
+morlaIds = [];
+for i = 1:numel(idxFinished)
+  j = idxFinished(i);
+  fn = string(findfiles('%s/study_result_%s/*/data.txt', dnameRaw, resultIds(j)));
   try
-    json = parsetxt([dnameRaw,FilesToCheck{iResult},'/data.txt']);
-    PPIDs = [PPIDs, json{2}.PROLIFIC_PID];
+    resultJson = jsondecode(fileread(fn));
+    morlaIds = [morlaIds, string(resultJson{1}.trials.info.moarla_subject_id)];
   catch
-    PPIDs = [PPIDs, 'N/A'];
+    morlaIds = [morlaIds, "DEPRECIATED"];
   end
 end
+% "mw8zeh" is my test ID.
+idxFinished(ismember(morlaIds, ["mw8zeh", "DEPRECIATED"])) = [];
+logthis('[%i] FINISHED results found.\n', numel(idxFinished))
 
-DnProlific = [DN_PROJ,'/local/prolific-data/raw'];
-fnamesDemo = findfiles([DnProlific,'/*/*csv']);
-assert(numel(fnamesDemo), 'cannot find prolific demo tables!')
-logthis('%i Profilic demographic tables found.\n', numel(fnamesDemo))
-
-for iProlific = 1:numel(fnamesDemo)
-  TblDemo = readtable(fnamesDemo{iProlific}, VariableNamingRule='preserve');
-  isDone = contains(TblDemo.Status, {'APPROVED','AWAITING REVIEW'});
-  TblDemo = TblDemo(isDone,:);
-  nLogs = size(TblDemo,1);
-  nResults = sum(ismember(TblDemo.("Participant id"), PPIDs));
-  logthis('Profilic table="%s": %i FINISHED logs & %i FINISHED results found.\n', ...
-    fnamesDemo{iProlific}, nLogs, nResults)
-  if nLogs ~= nResults
-    warning('#logs & #results MISMATCH! Reults could be in another server than "%s"', Job.ServerUrl)
-  end
-  for iSubj = 1:size(TblDemo,1)
-    thisPPID = TblDemo.("Participant id"){iSubj};
-    isFound = ismember(PPIDs, thisPPID);
-    if isscalar(isFound)
-      copyfile([dnameRaw,FilesToCheck{isFound},'/data.txt'], ...
-          fullfile(fileparts(fnamesDemo{iProlific}), [thisPPID,'.txt']))
-      % logthis('File copied: '); ls(fullfile(fileparts(fnamesDemo{iProlific}), [thisPPID,'.txt']))
-    end
+%% CREATE a NEW file if it is not there already
+morlaIds = [];
+for i = 1:numel(idxFinished)
+  j = idxFinished(i);
+  fn = string(findfiles('%s/study_result_%s/*/data.txt', dnameRaw, resultIds(j)));
+  resultJson = jsondecode(fileread(fn));
+  morlaId = string(resultJson{1}.trials.info.moarla_subject_id);
+  resultJson = [metaJson.data.studyResults(j); resultJson]; % put the metadata in the first
+  
+  % this is Unix timestamp in milliseconds 0 = 1970-01-01 00:00:00 UTC
+  startTime = char(datetime(resultJson{1}.startDate/1e+3, TimeZone='Europe/Berlin', ConvertFrom='posixtime', Format='yyyy-MM-dd''_''HH.mm.ss'));
+  fnameJson = sprintf('%s/%sDE_%s.json', Job.DnameData, startTime, morlaId);
+  if not(isfile(fnameJson))
+    fid = fopen(fnameJson,'w');
+    fwrite(fid, jsonencode(resultJson, PrettyPrint=true));
+    fclose(fid);
+    logthis('new result created: "%s"\n', fnameJson)
   end
   
 end
 
 
 
-%%
-if not(nargout)
-  clear Job
-end
-
-end
-
-
-function json = parsetxt(fname)
-txt = fileread(fname);
-idx = strfind(txt, 'sequence_id');
-if numel(idx) > 1
-  warning('Multiple entry: taking the last one.')
-  txt = txt(idx(end)-2:end);
-end
-json = jsondecode(['[', strrep(txt, '}{', '},{'), ']']);
 end

@@ -206,6 +206,7 @@ matlabbatch{1}.spm.stats.factorial_design.masking.im = 1;
 if ~isfield(job,'masking')
   matlabbatch{1}.spm.stats.factorial_design.masking.em = {''};
 else
+  matlabbatch{1}.spm.stats.factorial_design.masking.im = 0;
   matlabbatch{1}.spm.stats.factorial_design.masking.em = {[job.masking,',1']};
 end
 matlabbatch{1}.spm.stats.factorial_design.globalc.g_omit = 1;

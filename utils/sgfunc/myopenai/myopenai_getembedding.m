@@ -6,7 +6,7 @@
 %  .Input     a character array
 %  .FnameEmb  a filename to save
 % (.Model)     'text-embedding-3-large' (default) | 'text-embedding-3-small' | 'text-embedding-ada-002' (legacy)
-% (.KeyLoc)   '~/Documents/OpenAI/proj-key.txt' (default)
+%  .KeyLoc    api key local location
 % 
 % (CC4-BY) seung-goo.kim@ae.mpg.de
 
@@ -43,7 +43,7 @@ Request body:
 
 Job = defaultjob(struct( ...
   ServerUrl='https://api.openai.com/v1/embeddings', Model='text-embedding-3-large', ...
-  KeyLoc='~/Library/Mobile Documents/com~apple~CloudDocs/Documents/OpenAI/proj-key.txt' ...
+  KeyLoc='' ...
   ), ...
   Job, mfilename);
 if isfile(Job.FnameEmb)

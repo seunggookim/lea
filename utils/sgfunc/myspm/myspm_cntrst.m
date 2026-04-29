@@ -8,10 +8,10 @@ function Job = myspm_cntrst (Job)
 % JOB requires:
 %  .dir_glm
 %  .cntrstMtx  (for T-contrasts)
-%  .titlestr   (for T-contrasts)
+%  .titleStr   (for T-contrasts)
 %  .effectOfInterest [1x1] 0 | 1 (default=1)
 %  .FcntrstMtx (for F-contrasts)
-%  .Ftitlestr  (for F-contrasts)
+%  .FtitleStr  (for F-contrasts)
 %
 % (cc) 2018, 2019, sgKIM. solleo@gmail.com
 
@@ -38,32 +38,32 @@ if ~isfield(Job,'cntrstMtx')
     k = length(SPM.Sess(1).U);
     Job.cntrstMtx = [ones(1,k); -ones(1,k);
       kron(eye(k),[1 -1]')];
-    if ~isfield(Job,'titlestr')
+    if ~isfield(Job,'titleStr')
       varnames = [SPM.Sess(1).U(:).name];
-      Job.titlestr = {'+All','-All'};
+      Job.titleStr = {'+All','-All'};
       for i=1:numel(varnames)
-        Job.titlestr = [Job.titlestr, ['+',varnames{i}]];
-        Job.titlestr = [Job.titlestr, ['-',varnames{i}]];
+        Job.titleStr = [Job.titleStr, ['+',varnames{i}]];
+        Job.titleStr = [Job.titleStr, ['-',varnames{i}]];
       end
     end
   else % 2-level GLM:
 
     if numel(SPM.xX.iH)==2 % paired t-test
       Job.cntrstMtx = [1 -1; -1 1];
-      Job.titlestr = {'Cnt1>Cnt2', 'Cnt1<Cnt2'};
+      Job.titleStr = {'Cnt1>Cnt2', 'Cnt1<Cnt2'};
     else
       [n, k] = size(SPM.xX.X);
       Job.cntrstMtx = kron([zeros(k-1,1) eye(k-1)],[1 -1]');
-      if ~isfield(Job,'titlestr')
+      if ~isfield(Job,'titleStr')
         if ~isempty(SPM.xC)
           varnames = {SPM.xC.rcname};
         else
           varnames= {'1'};
         end
-        Job.titlestr = {};
+        Job.titleStr = {};
         for i=1:numel(varnames)
-          Job.titlestr = [Job.titlestr, ['+',varnames{i}]];
-          Job.titlestr = [Job.titlestr, ['-',varnames{i}]];
+          Job.titleStr = [Job.titleStr, ['+',varnames{i}]];
+          Job.titleStr = [Job.titleStr, ['-',varnames{i}]];
         end
       end
     end
@@ -85,8 +85,8 @@ NumSess = Job.NumSess;
 if isfield(Job,'cntrstMtx')
   NumCnt = size(Job.cntrstMtx,1);
   for k=1:NumCnt
-    if isfield(Job,'titlestr')
-      con.consess{k}.tcon.name = Job.titlestr{k};
+    if isfield(Job,'titleStr')
+      con.consess{k}.tcon.name = Job.titleStr{k};
     else
       con.consess{k}.tcon.name = ['Contrast#',num2str(k)];
     end
@@ -107,9 +107,9 @@ end
 if Job.effectOfInterest
   if ~isfield(Job,'FcntrstMtx')
     Job.FcntrstMtx={};
-    Job.Ftitlestr={};
+    Job.FtitleStr={};
   end
-  Job.Ftitlestr = [Job.Ftitlestr 'Effect of interest'];
+  Job.FtitleStr = [Job.FtitleStr 'Effect of interest'];
   if Job.isfmri
     for j = 1:numel(SPM.Sess)
       nRegInt(j) = numel(SPM.Sess(j).U); % number of regressors of interest
@@ -140,7 +140,7 @@ if isfield(Job,'FcntrstMtx')
   k = NumCnt;
   for j=1:numel(Job.FcntrstMtx)
     k = k + 1;
-    con.consess{k}.fcon.name = Job.Ftitlestr{j};
+    con.consess{k}.fcon.name = Job.FtitleStr{j};
     con.consess{k}.fcon.convec = Job.FcntrstMtx{j};
     if NumSess>1
       con.consess{k}.fcon.sessrep = 'repl';

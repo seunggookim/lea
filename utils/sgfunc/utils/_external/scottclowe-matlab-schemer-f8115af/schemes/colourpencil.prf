@@ -1,0 +1,33 @@
+# colourpencil - MATLAB color scheme
+# Generated with schemer_export v1.4.0, on MATLAB 25.2.0.3150157 (R2025b) Update 4
+# Mon Mar 02 19:37:14 CET 2026
+# To enable this color scheme in MATLAB use schemer_import, available at:
+#     https://github.com/scottclowe/matlab-schemer
+#     https://www.mathworks.com/matlabcentral/fileexchange/53862-matlab-schemer
+ColorsUseSystem=Bfalse
+ColorsUseMLintAutoFixBackground=Btrue
+Editor.VariableHighlighting.Automatic=Btrue
+Editor.NonlocalVariableHighlighting=Btrue
+EditorCodepadHighVisible=Bfalse
+EditorCodeBlockDividers=Bfalse
+Editorhighlight-caret-row-boolean=Btrue
+EditorRightTextLineVisible=Btrue
+EditorRightTextLimitLineWidth=I1
+ColorsText=C-9933978
+ColorsBackground=C-1
+Colors_M_Keywords=C-3079029
+Colors_M_Comments=C-11170877
+Colors_M_Strings=C-890939
+Colors_M_UnterminatedStrings=C-9868439
+Colors_M_SystemCommands=C-14770793
+Colors_M_Errors=C-13648145
+Colors_HTML_HTMLLinks=C-14250787
+Colors_M_Warnings=C-217282
+ColorsMLintAutoFixBackground=C-1118482
+Editor.VariableHighlighting.Color=C-333727
+Editor.NonlocalVariableHighlighting.TextColor=C-11625978
+Editorhighlight-lines=C-1118484
+Editorhighlight-caret-row-boolean-color=C-986133
+EditorRightTextLimitLineColor=C-7828859
+Color_CmdWinWarnings=C-12867022
+Color_CmdWinErrors=C-3079029

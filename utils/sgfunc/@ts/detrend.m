@@ -1,4 +1,4 @@
-function Ts = detrend(Ts, method)
+function ts = detrend(ts, method)
 %ts/detrend detrends the data of a TS object
 %   TSOUT = DETREND(TSIN, METHOD)
 %   TSIN is an input TS object to detrend
@@ -9,30 +9,30 @@ function Ts = detrend(Ts, method)
 % TsOut = detrend(TsIn, "linear")
 
 
-if not(isfield(Ts.DataInfo.UserData, 'Detrend'))
-  Ts.DataInfo.UserData.Detrend.Method = 'none';
+if not(isfield(ts.DataInfo.UserData, 'Detrend'))
+  ts.DataInfo.UserData.Detrend.Method = 'none';
 end
-if not(strcmp(Ts.DataInfo.UserData.Detrend.Method, 'none'))
-  error('The input has already been detrended "%s"', Ts.DataInfo.UserData.Detrend)
+if not(strcmp(ts.DataInfo.UserData.Detrend.Method, 'none'))
+  error('The input has already been detrended "%s"', ts.DataInfo.UserData.Detrend)
 else
   if contains(method, ["none", "constant", "linear"])
     switch method
       case "constant"
-        Ts.DataInfo.UserData.Detrend.OrigMean = mean(Ts);
-        Ts.Data = Ts.Data - Ts.DataInfo.UserData.Detrend.OrigMean;
+        ts.DataInfo.UserData.Detrend.OrigMean = mean(ts);
+        ts.Data = ts.Data - ts.DataInfo.UserData.Detrend.OrigMean;
       case "linear"
-        X = (1:size(Ts.Time,1))';
+        X = (1:size(ts.Time,1))';
         X = X - mean(X);
-        X = [ones(size(Ts.Time,1),1), X];
-        B = (X'*X)\X'*Ts.Data;
-        Ts.Data = Ts.Data - X*B;
-        Ts.DataInfo.UserData.Detrend.OrigMean = B(1,:);
-        Ts.DataInfo.UserData.Detrend.OrigSlope = B(2,:);
+        X = [ones(size(ts.Time,1),1), X];
+        B = (X'*X)\X'*ts.Data;
+        ts.Data = ts.Data - X*B;
+        ts.DataInfo.UserData.Detrend.OrigMean = B(1,:);
+        ts.DataInfo.UserData.Detrend.OrigSlope = B(2,:);
     end
   else
     error('"%s": unrecognizable detrending methods! ["none" | "constant" | "linear"]')
   end
 end
-Ts.DataInfo.UserData.Detrend.Method = method;
+ts.DataInfo.UserData.Detrend.Method = method;
 
 end

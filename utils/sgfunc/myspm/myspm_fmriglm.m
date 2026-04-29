@@ -12,7 +12,7 @@ function Job = myspm_fmriglm (Job)
 % JOB requires fields for myspm_fmriglm.m:
 % -input files
 %  .files_query '1xN' for query to find image filenames using "dir" function
-%                (e.g., "/path/to/subj/EPI_r*.nii")
+%                (e.g., "/path/to/subj/EPI_r*.nii")`
 % or
 %  .filenames   {1xJ} EPI files for J sessions (instead of files_query)
 %
@@ -21,6 +21,7 @@ function Job = myspm_fmriglm (Job)
 %
 % -HRF model: default is a canonical HRF
 % (.microt0)        [1x1] where you STC [0,1] default = 0.5
+% (.hrfderivs)      [1x2] time deriv and dispersion {[0 0]} | [1 0] | [1 1]
 % (.fir)            (1x1) finite-impulse-response model parameters
 % (.fir.length_sec) [1x1] Post-stimulus window length (in seconds)
 %                         (default: stimulus-duration)
@@ -62,14 +63,14 @@ function Job = myspm_fmriglm (Job)
 %
 % -for myspm_cntrst.m:
 % (.cntrstMtx)
-% (.titlestr)
+% (.titleStr)
 % (.effectOfInterest)
 % (.FcntrstMtx)
-% (.Ftitlestr)
+% (.FtitleStr)
 %
 % -for myspm_result.m:
 % (.noreport)       [1x1] creates no reports (stops after cntrst)
-% (.masking)        '1xN' filename for an explicit (inclusive) mask
+% (.masking)        {1xN} filename for an explicit (inclusive) mask
 %                         * NECESSARY for images with negative values!
 % (.maskthres)      [1x1] masking threshold prop. to gloabl (default = 0.8)
 % (.thres.desc)     '1xN'  'FWE','none', or 'cluster'(default)
@@ -79,7 +80,7 @@ function Job = myspm_fmriglm (Job)
 % (.thres.clusterInitExtent)  [1x1] cluster forming extent (in voxels) threshold (default=10)
 % (.fname_struct)   '1xN' fullpath filename for background anatomical image for orthogonal slices
 %                         (default='$FSLDIR/data/standard/MNI152_T1_1mm.nii.gz')
-% (.titlestr)       {1xK} Title texts for K contrasts for SPM result report (default={'positive','negative'})
+% (.titleStr)       {1xK} Title texts for K contrasts for SPM result report (default={'positive','negative'})
 % (.dir_sum)        '1xN' a summary directory into where you want to copy significant results
 % (.append)         [1x1] whether to append results into an existing report (default=0)
 % (.print)          [1x1] whether to generate results (default=1)
@@ -222,11 +223,11 @@ spm_jobman('initcfg');
 
 %% 0-1. find glm directory name and create one
 [~,Job.model_desc,~] = myfileparts(Job.dir_glm);
-logthis('[0a] Model description = "%s"\n', Job.model_desc)
+logthis('Model description = "%s"\n', Job.model_desc)
 [~,~] = mkdir(Job.dir_glm);
 
 %% 0-2. check files exist
-logthis('[0b] checking inputs..\n')
+logthis('checking inputs..\n')
 if isfield(Job,'files_query')
   Job.filenames = findfiles(Job.files_query);
 end
@@ -238,7 +239,7 @@ Job.NumFrames = zeros(1,Job.NumSess);
 for j = 1:Job.NumSess
   hdr = niftiinfo(Job.filenames{j});
   Job.NumFrames(j) = hdr.ImageSize(4);
-  logthis('[0c] # of frames: run(%i) = %i\n', j, Job.NumFrames(j))
+  logthis('# of frames: run(%i) = %i\n', j, Job.NumFrames(j))
 end
 
 % find conditions to contruct design matrix
@@ -279,6 +280,7 @@ else
   end
   matlabbatch{1}.spm.stats.fmri_spec.timing.fmri_t0 = round(Job.microt0 * 16); % middle point after STC
   if isfield(Job,'hrfderivs')
+    logthis('cHRF derivative terms defined: '); disp(Job.hrfderivs)
     matlabbatch{1}.spm.stats.fmri_spec.bases.hrf.derivs = Job.hrfderivs;
   else
     matlabbatch{1}.spm.stats.fmri_spec.bases.hrf.derivs = [0 0];
@@ -368,11 +370,12 @@ for j = 1:Job.NumSess
     else
       fn_rp = [dir_sess,'/rp_',Job.suffix_rp{j},'.txt'];
     end
-    rpname={'dx','dy','dz','rx','ry','rz','dTrans/dt','dRot/dt'};
-    logthis('[1b] Covarying %i motion parameters: ',Job.num_rp);
+    rpname = {'dx','dy','dz','rx','ry','rz','dxdt', 'dydt', 'dzdx', 'drxdt', 'drydt', 'drzdt'};
+    logthis('Covarying %i motion parameters: ',Job.num_rp);
     disp(rpname);
     rp = load(fn_rp);
-    rp = [ rp(:,1:6), [0; l2norm(diff(rp(:,1:3)))], [0; l2norm(diff(rp(:,4:6)))] ];
+    % rp = [ rp(:,1:6), [0; l2norm(diff(rp(:,1:3)))], [0; l2norm(diff(rp(:,4:6)))] ];
+    rp = [ rp(:,1:6), [0 0 0 0 0 0; diff(rp(:,1:6))] ];
     for k = 1:Job.num_rp
       sess(j).regress(l).name = rpname{k};
       sess(j).regress(l).val  = rp(:,k);
@@ -383,7 +386,7 @@ for j = 1:Job.NumSess
   % CompCor parameters
   if ~isfield(Job,'num_cc'), Job.num_cc=0; end
   if Job.num_cc
-    logthis('[1c] Covarying %i CompCor parameters\n', Job.num_cc);
+    logthis('Covarying %i CompCor parameters\n', Job.num_cc);
     if ~isfield(Job,'prefix_cc')
       [~,fname] = myfileparts(Job.filenames{j});
       [fwhm,isW,isU,isA,origname] = myspm_parse_filename(fname);
@@ -420,16 +423,16 @@ for j = 1:Job.NumSess
   end
   
   sess(j).hpf = Job.hpfcutoff;
-  disp(['[1e] high-pass cut-off: ',num2str(sess(j).hpf),' s']);
+  logthis('high-pass cut-off: %f s\n',sess(j).hpf);
   
   matlabbatch{1}.spm.stats.fmri_spec.sess = sess;
   matlabbatch{1}.spm.stats.fmri_spec.fact = struct('name', {}, 'levels', {});
   if isfield(Job,'masking')
-    disp(['[1f] A mask is given: ',Job.masking{j}]);
+    logthis('A mask is given: %s\n', Job.masking{j});
     matlabbatch{1}.spm.stats.fmri_spec.mask = {[Job.masking{j},',1']};
   end
   if isfield(Job,'maskthres')
-    disp(['[1f] Masking threshold (wrt global) is given: ',num2str(Job.maskthres)]);
+    logthis('Masking threshold (wrt global) is given: %f\n',Job.maskthres);
     matlabbatch{1}.spm.stats.fmri_spec.mthresh = Job.maskthres;
   end
   
@@ -508,7 +511,7 @@ if ~isfield(Job,'thres')
   Job.thres.alpha = 0.05;
 end
 if ~(isfield(Job,'NOCNTRST') && Job.NOCNTRST)
-  myspm_cntrst (Job);
+  myspm_cntrst(Job);
 end
 
 % %% 6. Comutes contrasts quickly..?

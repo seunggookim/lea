@@ -30,7 +30,7 @@ if ~exist('Cfg','var')||isempty(Cfg); Cfg = struct(); end
 
 %% Create runme.sh
 FnameSh = fullfile(DnTemp,'runme.sh');
-DefaultCfg = struct('Partition','octopus', 'CpuPerTask', 1, 'nTasks', 1, 'Mem_GB', 5, 'IsWait', false, 'Switch', '');
+DefaultCfg = struct('Partition','octopus', 'CpuPerTask', 1, 'nTasks', 1, 'Mem_GB', 5, 'IsWait', true, 'Switch', ' ');
 Cfg = defaultcfg(DefaultCfg, Cfg, mfilename);
 
 fid = fopen(FnameSh,'w');

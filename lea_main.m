@@ -5,13 +5,13 @@ function Job = lea_main(Job)
 % .FnamesX       {#stims x #feature-spaces (terms)} (or a string array)
 % .FnamesY       {#stims x #response-spaces (modalities)} (or a string array)
 % .DnameMdl      '1 x #char'  (default: a temp directory)
-%(.nRands)       [1 x 1]  (default: 10000)
 % .DelayRange    [duration: 1 x 2] 
 % .SampleRateHz  [1 x 1]  (default: 1)
+% .CvDesign      'loocv' | [1 x 2] for a nested (#outer-fold x #inner-fold) k-fold | hmm..
 %(.DelaysSmp)    [1 x #delays]  (default: from .SamplingRateHz and .DelayRange)
 %(.LambdaGrid)   [1 x #lambdas]  (default: 10.^(-20:20))
-% .CvDesign      'loocv' | [1 x 2] for a nested (#outer-fold x #inner-fold) k-fold | hmm..
 %(.IsComputeItc) [1 x 1] true | false  (default: true)
+%(.nRands)       [1 x 1]  (default: 10000)
 %
 % (CC4-BY) 2024-2025, seung-goo.kim@ae.mpg.de
 
@@ -19,6 +19,7 @@ function Job = lea_main(Job)
 % 2024-09-02: for behavioral data analysis
 % 2024-11-05: add-ons for fmri & eeg data analysis with a custom class TS (time series)
 % 2025-03-28: visualizaton of EEG, fMRI, and BHV results
+% 2026-04-29: non-parametric P-values for ITC
 
 %TODOs
 % - [_] better optimization for multi-penalty

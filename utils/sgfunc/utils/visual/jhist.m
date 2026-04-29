@@ -11,8 +11,8 @@ else
   end
 end
 if nargin<=3
-  XbinEdges=linspace(min(X),max(X),N(1)+1);
-  YbinEdges=linspace(min(Y),max(Y),N(2)+1);
+  XbinEdges=linspace(min(X)-eps,max(X)+eps,N(1)+1);
+  YbinEdges=linspace(min(Y)-eps,max(Y)+eps,N(2)+1);
 else
   N=[numel(YbinEdges) numel(XbinEdges)];
 end

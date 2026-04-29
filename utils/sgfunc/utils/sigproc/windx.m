@@ -1,4 +1,4 @@
-function x = windx(srate_hz,wind_ms,x,verbose)
+function [x,w] = windx(srate_hz,wind_ms,x,verbose)
 % x = windx(srate_hz, wind_ms, x, [verbose])
 %
 % winding the begining and end of x for wind_ms
@@ -48,8 +48,7 @@ end
 
 %% Checking outputs
 if verbose
-  fprintf('#samples=%i, #channels=%i, samplingrate=%i Hz, wind=%i ms\n', ...
-    npts, nchns, srate_hz, wind_ms);
+  fprintf('#samples=%i, #channels=%i, samplingrate=%i Hz, wind=%i ms\n', npts, nchns, srate_hz, wind_ms);
 end
 if verbose == 2
   t0 = 0:1/srate_hz:(npts-1)/srate_hz;

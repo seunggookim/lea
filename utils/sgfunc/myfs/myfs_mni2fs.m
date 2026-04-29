@@ -61,7 +61,7 @@ if (~isfield(cfg,'nofigure') || ~cfg.nofigure) || (nargout>1)
   if ~exist('Y','var'), load(fname_out,'Y'); end
 end
 if (~isfield(cfg,'nofigure') || ~cfg.nofigure)
-  myfs_view(surfs, Y, cfg);
+  myfs_viewsurf(surfs, Y, cfg);
 end
 
 end

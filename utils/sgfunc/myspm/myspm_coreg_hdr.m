@@ -12,16 +12,17 @@ ls(JOB.fname_epi);
 ls(JOB.fname_t1w);
 [p1,f1,e1]=myfileparts(JOB.fname_epi);
 
-%% 1. Intensity-bias correction of EPI (for stable coregistration)
-fname_epi_unbiased = [p1,'/mmean',f1,e1]; % bias-corrected EPI
-JOB.fname_epi_unbiased = fname_epi_unbiased;
-if ~exist([p1,'/meanua',f1,e1],'file')
+% %% 1. Intensity-bias correction of EPI (for stable coregistration)
+% fname_epi_unbiased = [p1,'/mmean',f1,e1]; % bias-corrected EPI
+% JOB.fname_epi_unbiased = fname_epi_unbiased;
+if ~exist([p1,'/mean',f1,e1],'file')
   unix(['FSLOUTPUTTYPE=NIFTI; fslmaths ',p1,'/',f1,e1,' -Tmean ',p1,'/mean',f1,e1]);
 end
-if ~exist(fname_epi_unbiased,'file')
-  unix(['mri_nu_correct.mni --i ',p1,'/mean',f1,e1,' --o ',fname_epi_unbiased]);
-  ls(fname_epi_unbiased)
-end
+% if ~exist(fname_epi_unbiased,'file')
+%   unix(['mri_nu_correct.mni --i ',p1,'/mean',f1,e1,' --o ',fname_epi_unbiased]);
+%   ls(fname_epi_unbiased)
+% end
+fname_epi_unbiased = [p1,'/mean',f1,e1];
 
 %% 2. Coregistration of EPI to native T1w
 % outputs: <modifying transform matrices in headers>
@@ -42,7 +43,7 @@ estimate1.eoptions.tol = ...
 estimate1.eoptions.fwhm = [7 7];
 matlabbatch={};
 matlabbatch{1}.spm.spatial.coreg.estimate = estimate1;
-fname_out=[p1,'/',f1,'.mat'];
+fname_out = [p1,'/',f1,'.mat'];
 if ~exist(fname_out,'file')
   fname_matlabbatch=[p1,'/myspm_coreg_hdr_',f1,'.mat'];
   save(fname_matlabbatch,'matlabbatch');
@@ -50,20 +51,17 @@ if ~exist(fname_out,'file')
   spm_jobman('run', matlabbatch);
   ls(fname_out)
 end
+
 %% resample the first volume (to check coregistration quality)
-[p4,f4,e4]=myfileparts(fname_epi_unbiased);
-if ~exist([p4,'/r',f4,e4],'file')
+fn_epi_in_t1w = spm_file(fname_epi_unbiased,'prefix','o');
+if not(isfile(fn_epi_in_t1w))
   matlabbatch={};
   matlabbatch{1}.spm.spatial.coreg.write.ref{1}    = JOB.fname_t1w;
   matlabbatch{1}.spm.spatial.coreg.write.source{1} = [fname_epi_unbiased,',1'];
   matlabbatch{1}.spm.spatial.coreg.write.roptions.interp = 4;
   matlabbatch{1}.spm.spatial.coreg.write.roptions.wrap = [0 0 0];
   matlabbatch{1}.spm.spatial.coreg.write.roptions.mask = 0;
-  matlabbatch{1}.spm.spatial.coreg.write.roptions.prefix = 'r';
+  matlabbatch{1}.spm.spatial.coreg.write.roptions.prefix = 'o';
   spm_jobman('run', matlabbatch);
-  fname_epi_in_t1w=[p1,'/r',f4,e1];
-  slices(fname_epi_in_t1w,[],...
-    struct('fname_png',[p1,'/rmmean',f1,'_in_',f2,'.png'],...
-    'contour',JOB.fname_t1w))
-end
+  slices(fn_epi_in_t1w,[], struct('fname_png', strrep(fn_epi_in_t1w, e2,'.png'), 'contour',JOB.fname_t1w))
 end

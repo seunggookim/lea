@@ -1,20 +1,20 @@
-function JOB = myants_antsRegistration(JOB)
-% JOB = myants_antsRegistration(JOB)
+function Job = myants_antsRegistration(Job)
+% Job = myants_antsRegistration(Job)
 %
-% JOB requires:
-%  .fname_fixed
-%  .fname_moving
-% (.dname_out)        [default: path of fname_moving]
-% (.reg_stages)       0=rigid, 1=+affine, 2=+SyN [default]
-% (.interpolation)    'linear' [default] | 'NearestNeighbor' | 'BSpline[<order=3>]' | 
+% Job requires:
+%  .FnameFixed
+%  .FnameMoving
+% (.DnameOut)         [default: path of FnameMoving]
+% (.RegStages)        0=rigid, 1=+affine, 2=+SyN [default]
+% (.Interpolation)    'linear' [default] | 'NearestNeighbor' | 'BSpline[<order=3>]' | 
 %                     'LanczosWindowedSinc' | and more...
-% (.reg_SyNtransform) 'SyN[0.1,3,0]' for inter-subject reg [default]
+% (.RegSyNtransform)  'SyN[0.1,3,0]' for inter-subject reg [default]
 %                     'SyN[0.1,3,0.5]' for intra-subject reg
 %                     
 %                     
 % REF: https://github.com/ANTsX/ANTs/wiki/Anatomy-of-an-antsRegistration-call
 %
-% (cc) 2019, sgKIM
+% (cc0) 2019-2025, seung-goo.kim@ae.mpg.de
 
 %% check LD_LIBRARY_PATH
 %{
@@ -32,33 +32,27 @@ setenv('LD_LIBRARY_PATH', LD_LIBRARY_PATH(1:end-1));
 
 
 %% Check inputs
-[p1,f1,e1] = myfileparts(JOB.fname_fixed);
-[p2,f2,e2] = myfileparts(JOB.fname_moving);
+[p1,f1,e1] = myfileparts(Job.FnameFixed);
 fn_fixed=[p1,'/',f1,e1];
 assert(isfile(fn_fixed))
+[p2,f2,e2] = myfileparts(Job.FnameMoving);
 fn_moving=[p2,'/',f2,e2];
 assert(isfile(fn_moving))
-% hdr_fixed = load_untouch_header_only(fn_fixed);
 Info = niftiinfogz(fn_fixed);
-% voxsize_fixed = prod(hdr_fixed.dime.pixdim(2:4));
 voxsize_fixed = prod(Info.PixelDimensions(1:3));
-% hdr_moving = load_untouch_header_only(fn_moving);
 Info = niftiinfogz(fn_moving);
-% voxsize_moving = prod(hdr_moving.dime.pixdim(2:4));
 voxsize_moving = prod(Info.PixelDimensions(1:3));
 if voxsize_fixed > voxsize_moving
-  warning(['fixedImage is in a lower resolution than movingImage. ',...
-    'Because shrink factor is based on fixedImage, this may cause a coarse ',...
-    'registration. LowRes-to-highRes registration is recommended.']);
+  warning(['fixedImage is in a lower resolution than movingImage. Because shrink factor is based on fixedImage, ',...
+    'this may cause a coarse registration. LowRes-to-highRes registration is recommended.']);
 end
-if ~isfield(JOB,'dname_out')
-  JOB.dname_out = p2;
+if ~isfield(Job,'DnameOut')
+  Job.DnameOut = p2;
 end
-if ~isfield(JOB,'reg_stages')
-  JOB.reg_stages = 2; % 0=rigid, 1=+affine, 2=+SyN [default]
+if ~isfield(Job,'RegStages')
+  Job.RegStages = 2; % 0=rigid, 1=+affine, 2=+SyN [default]
 end
-prefix = [JOB.dname_out,'/',...
-  f2,'_to_',f1,'_stage',num2str(JOB.reg_stages),'_'];
+prefix = [Job.DnameOut,'/',f2,'_to_',f1,'_stage',num2str(Job.RegStages),'_'];
 fn_reg=[prefix,'Composite.h5'];
 
 fn_fwdwarped = [prefix,'fwdwarped.nii.gz'];
@@ -67,32 +61,32 @@ fn_invwarped = [prefix,'invwarped.nii.gz'];
 
 %% antsRegistration
 cmd=['antsRegistration ']; % --dimensionality 3 
-if ~isfield(JOB,'dimensionality')
-  JOB.dimensionality = 3;
+if ~isfield(Job,'dimensionality')
+  Job.dimensionality = 3;
 end
-cmd=[cmd,' --dimensionality ',num2str(JOB.dimensionality)];
+cmd=[cmd,' --dimensionality ',num2str(Job.dimensionality)];
 % output options
 cmd=[cmd,...
   ' --write-composite-transform 1',... % this is composite (0th to 3rd)
   ' --float 0 ',...
   ' --output [',prefix,',',fn_fwdwarped,',',fn_invwarped,'] '];
-if ~isfield(JOB,'interpolation')
-  JOB.interpolation = 'linear';
+if ~isfield(Job,'Interpolation')
+  Job.Interpolation = 'linear';
 end
-cmd=[cmd,' --interpolation ',JOB.interpolation,' '];
+cmd=[cmd,' --interpolation ',Job.Interpolation,' '];
 
 % preprocessing (clipping, intensity matching, coordinate initialization)
-if ~isfield(JOB,'useHistogramMatching')
-  JOB.useHistogramMatching = 0; % 0=for inter-modal, 1=for intra-modal reg
+if ~isfield(Job,'useHistogramMatching')
+  Job.useHistogramMatching = 0; % 0=for inter-modal, 1=for intra-modal reg
 end
 cmd=[cmd,...
   ' --winsorize-image-intensities [0.005,0.995] ',... % clipping outliers (%)
-  ' --use-histogram-matching ',num2str(JOB.useHistogramMatching),' ']; 
+  ' --use-histogram-matching ',num2str(Job.useHistogramMatching),' ']; 
 cmd=[cmd, ' --initial-moving-transform [',fn_fixed,',',fn_moving,',1] '];
 % matching 0=midpoint of bounding boxes, 1=center of mass, 2=origin
 
 % 0th transform: rigid
-if JOB.reg_stages >= 0
+if Job.RegStages >= 0
   cmd=[cmd,...
     ' --transform Rigid[0.1] ',... % gradient (0.1-0.25 recommended)
     ' --metric MI[',fn_fixed,',',fn_moving,',1,64,Regular,0.25] '];
@@ -110,7 +104,7 @@ if JOB.reg_stages >= 0
 end
 
 % 1st transform: affine
-if JOB.reg_stages >= 1
+if Job.RegStages >= 1
   cmd=[cmd,... % parameters are same as rigid
     ' --transform Affine[0.1] ',...
     ' --metric MI[' fn_fixed ',' fn_moving ',1,32,Regular,0.25] ',...
@@ -120,11 +114,11 @@ if JOB.reg_stages >= 1
 end
 
 % 2nd transform: symmetric image normalization (SyN)
-if JOB.reg_stages >= 2
-  if ~isfield(JOB,'reg_SyNtransform')
-    JOB.reg_SyNtransform = 'SyN[0.1,3,0]';
+if Job.RegStages >= 2
+  if ~isfield(Job,'RegSyNtransform')
+    Job.RegSyNtransform = 'SyN[0.1,3,0]';
   end
-  cmd=[cmd,' --transform ',JOB.reg_SyNtransform,' '];
+  cmd=[cmd,' --transform ',Job.RegSyNtransform,' '];
   % [gradientStep,updateFieldVarianceInVoxelSpace,totalFieldVarianceInVoxelSpace]
   % gradient step - allowed movement at each iteration (0.1-0.25
   % recommended) updateFieldVarianceInVoxelSpace -  a smoothing penalty on
@@ -142,24 +136,23 @@ end
 cmd = [cmd,' --verbose 2>&1 | tee ',prefix,'.log'];
 if not(isfile(fn_reg))
   tic
-  fid = fopen([prefix,'cmd.sh'],'w');
-  fprintf(fid,'%s\n',cmd);
-  fclose(fid);
-  fprintf('[%s] START (%s)\n', mfilename, datestr(now,31));
+  logthis('START\n')
+  % fprintf('[%s] START (%s)\n', mfilename, datestr(now,31));
   disp(cmd);
-  system(cmd);
-  fprintf('[%s] END (%s) ', mfilename, datestr(now,31));
+  mysystem(cmd);
+  % fprintf('[%s] END (%s) ', mfilename, datestr(now,31));
+  logthis('END: ')
   toc
 end
-JOB.fname_reg = fn_reg;
-JOB.fname_fwdwarped = fn_fwdwarped;
-JOB.fname_invwarped = fn_invwarped;
+Job.fname_reg = fn_reg;
+Job.fname_fwdwarped = fn_fwdwarped;
+Job.fname_invwarped = fn_invwarped;
 
 %% visualize results
 [p3,f3,~] = myfileparts(fn_fwdwarped);
-cfg = struct('fname_png',[p3,'/',f3,'.png'],'contour',fn_fixed);
+cfg = struct('fname_png',[p3,'/',f3,'.png'],'contour',fn_fixed, 'layout',[1 9]);
 slices(fn_fwdwarped,[], cfg)
 [p3,f3,~] = myfileparts(fn_invwarped);
-cfg = struct('fname_png',[p3,'/',f3,'.png'],'contour',fn_moving);
+cfg = struct('fname_png',[p3,'/',f3,'.png'],'contour',fn_moving, 'layout',[1 9]);
 slices(fn_invwarped,[], cfg)
 end

@@ -1,4 +1,4 @@
-function [z, p ] = r2z(r, n)
+function [z, p] = r2z(r, n)
 % [z, p]=r2z(r, n)
 %
 % (cc) 2018-2019, sgKIM

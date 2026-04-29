@@ -144,7 +144,7 @@ for cntrst=1:NumCntrst %numel(JOB.titlestr) % for each contrast
     matlabbatch{1}.spm.stats.results.conspec(1).extent = JOB.thres.extent;
   end
   if isfield(JOB,'mask')
-    matlabbatch{1}.spm.stats.results.conspec(1).mask.image.name = {[JOB.masking{1},',1']};
+    matlabbatch{1}.spm.stats.results.conspec(1).mask.image.name = {[JOB.masking,',1']};
     matlabbatch{1}.spm.stats.results.conspec(1).mask.image.mtype = 0;
   end
   matlabbatch{1}.spm.stats.results.conspec(1).titlestr = JOB.titlestr{cntrst};

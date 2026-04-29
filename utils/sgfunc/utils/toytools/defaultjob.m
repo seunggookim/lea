@@ -27,10 +27,12 @@ for iFld = 1:numel(FldNames)
       if not(contains(class(value), {'string','char'}))
         fprintf('\b')
       end
+      if isempty(value) || isequal(value,"")
+        fprintf('\n')
+      end
     end
     Job.(FldNames{iFld}) = value;
   end
 end
-fprintf('\n')
 
 end

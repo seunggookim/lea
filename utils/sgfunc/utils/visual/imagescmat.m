@@ -5,8 +5,8 @@ H = [];
 hold on
 for i = 1:size(X,1)
   for j = 1:size(X,2)
-    H(i,j) = text(j,i, sprintf('%.2f',X(i,j)),'fontsize',7, 'horizontalAlignment','center',...
-      'verticalAlignment','middle','color',FontColor);
+    H(i,j) = text(j,i, sprintf('%.2f',X(i,j)),'fontsize',20, 'horizontalAlignment','center',...
+      'verticalAlignment','middle','color','w');
   end
 end
 

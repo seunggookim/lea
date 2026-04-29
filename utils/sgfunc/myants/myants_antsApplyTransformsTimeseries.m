@@ -25,7 +25,7 @@ tic;
 DnTempsrc = fullfile(DnOut, 'myantstmp', java.util.UUID.randomUUID.char);
 mkdir(DnTempsrc)
 logthis('Unpacking the source file "%s" into a temporary directory "%s"...\n', Job.FnameMoving, DnTempsrc)
-system(sprintf('ImageMath 4 %s/.nii TimeSeriesDisassemble %s', DnTempsrc, Job.FnameMoving));
+mysystem(sprintf('ImageMath 4 %s/.nii TimeSeriesDisassemble %s', DnTempsrc, Job.FnameMoving));
 
 %% DATATYPE code for antsApplyTransforms
 Info = niftiinfo(Job.FnameMoving);
@@ -41,25 +41,26 @@ end
 %% Transform volume by volume
 files = dir(fullfile(DnTempsrc,'*.nii'));
 logthis('Now transforming each of %i images...\n', numel(files))
-% DnTemptrg = fullfile(DnOut, 'myantstmp', sprintf('%16i',rand*1e17));
 DnTemptrg = fullfile(DnOut, 'myantstmp', java.util.UUID.randomUUID.char);
 mkdir(DnTemptrg)
-counter = 0;
+% counter = 0;
 nfiles = numel(files);
+pBar = textprogressbar(nfiles);
 for ifile = 1:nfiles
   FnMov = fullfile(files(ifile).folder, files(ifile).name);
   FnOut = fullfile(DnTemptrg, files(ifile).name);
   cfg = struct('FnameMoving',FnMov, 'FnameFixed',Job.FnameFixed, 'FnameOut',FnOut, 'odt', datatype, ...
-    'Transforms',{Job.Transforms}, 'IsCreateFig', false);
+    'Transforms',{Job.Transforms}, 'IsCreateFig',false, 'Interpolation','Linear');
   myants_antsApplyTransforms(cfg);
   
-  currentProgress = round(ifile/nfiles*10);
-  if currentProgress > counter
-    fprintf('..%i0%%',currentProgress)
-    counter = currentProgress;
-  end
+  % currentProgress = round(ifile/nfiles*10);
+  % if currentProgress > counter
+  %   fprintf('..%i0%%',currentProgress)
+  %   counter = currentProgress;
+  % end
+  pBar(ifile);
 end
-fprintf('\n')
+% fprintf('\n')
 
 Info = niftiinfo(Job.FnameMoving);
 Tr_sec = Info.PixelDimensions(4);
@@ -68,7 +69,7 @@ Tr_sec = Info.PixelDimensions(4);
 % This takes a bit longer but it respects the original precision
 logthis('Repacking images into a single file "%s"...\n', Job.FnameOut)
 setenv('FSLOUTPUTTYPE','NIFTI');
-system(sprintf('fslmerge -tr %s %s/*.nii %g', Job.FnameOut, DnTemptrg, Tr_sec));
+mysystem(sprintf('fslmerge -tr %s %s/*.nii %g', Job.FnameOut, DnTemptrg, Tr_sec));
 assert(isfile(Job.FnameOut))
 logthis('Transformation took %.3f sec.\n', toc)
 

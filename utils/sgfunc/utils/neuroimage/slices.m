@@ -10,7 +10,7 @@ function [H, cfg, base, data] = slices(base, data, cfg)
 % CFG is a structure:
 % (.contour) can be (1) filename, (2) structure, or (3) 3-D numarray
 %                   or a cell array of such
-% (.basemethod)
+% (.basemethod)  'nearest' | 'linear' | 'mip'
 % (.method)
 % (.contoursmoothing)
 % (.colorbarvisible)
@@ -32,7 +32,7 @@ end
 
 %% CHECK INPUT ============================================================
 % - Base volume
-if ischar(base) % for filenames
+if ischar(base) || isstring(base) % for filenames
   base = helper_read(base);
 end
 if islogical(base)
@@ -50,7 +50,7 @@ base = helper_conform(base); % make sure all have .vol and .vox2ras
 
 % - Data volume
 if ~exist('data','var'), data = []; end
-if ischar(data)
+if ischar(data) || isstring(data)
   [p1,f1,e1] = myfileparts(data);
   if contains(lower(data),'fslho') && isempty(e1)
     [data, cmap] = helper_readfslatlas(data);
@@ -414,7 +414,7 @@ H(iaxes).colorbar.Location = 'southOutside';
 if isfield(cfg,'colorbarposition')
   H(iaxes).colorbar.Position = cfg.colorbarposition;
 else
-  H(iaxes).colorbar.Position = [.4 .41 .2 .01];
+  H(iaxes).colorbar.Position = [.4 .41 .2 .02];
 end
   
 H(iaxes).colorbar.FontSize = cfg.coordfontsize;
@@ -422,7 +422,7 @@ if isfield(cfg,'colorbarxlabel')
   H(iaxes).colorbar.Label.String = cfg.colorbarxlabel;
 end
 if isfield(cfg,'colorbartitle')
-  title(H(iaxes).colorbar, cfg.colorbartitle, 'color',cfg.coordfontcolor)
+  title(H(iaxes).colorbar, cfg.colorbartitle, 'color',cfg.coordfontcolor, 'interp','none')
 end
 if isfield(cfg,'colorbarvisible')
   H(iaxes).colorbar.Visible = cfg.colorbarvisible;
@@ -436,13 +436,13 @@ end
 %% OUT
 if isfield(cfg,'fname_png')
   if ~isfield(cfg,'dpi')
-    cfg.dpi = 300;
+    cfg.dpi = 150;
   end
-  gl = opengl('data');
-  if strcmp(gl.Renderer, 'None')
-    rendopt = '-painters';
-  else
+  r = rendererinfo;
+  if contains(r.GraphicsRenderer, 'OpenGL')
     rendopt = '-opengl';
+  else
+    rendopt = '-painters';
   end
   export_fig(cfg.fname_png,['-r',num2str(cfg.dpi)],rendopt)
   close(cfg.figurehandle)

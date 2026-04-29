@@ -127,10 +127,10 @@ img_base_rgb = squeeze(ind2rgb(img_base+1, cfg.basecolormap));
 img_over = data;
 img_over(cfg.thres(1)<data & data<cfg.thres(2)) = nan; % thresholding
 if isfield(cfg,'mask'), img_over(~cfg.mask) = nan; end % masking
-g = opengl('data');
-if strcmp(g.Renderer, 'None')
-  img_over(isnan(img_over)) = 0;
-end
+% g = opengl('data');
+% if strcmp(g.Renderer, 'None')
+%   img_over(isnan(img_over)) = 0;
+% end
 
 
 %% Surfaces

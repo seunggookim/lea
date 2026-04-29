@@ -1,4 +1,4 @@
-function Job = myants_combineTransforms(Job)
+function Job = myants_combinetransforms(Job)
 %
 % antsApplyTransforms can be used to combine all Transforms and create a
 % displacement field.
@@ -33,24 +33,19 @@ setenv('LD_LIBRARY_PATH', LD_LIBRARY_PATH(1:end-1));
 
 %% check inputs
 for itrans = 1:size(Job.Transforms,1)
-  assert(isfile(Job.Transforms{itrans,1}), ...
-    'Job.Transforms{%i,1}="%s" NOT FOUND!', itrans, ...
-    Job.Transforms{itrans,1})
+  assert(isfile(Job.Transforms{itrans,1}), 'Job.Transforms{%i,1}="%s" NOT FOUND!', itrans, Job.Transforms{itrans,1})
 end
 assert(isfile(Job.FnameFixed),...
   'Job.FnameFixed="%s" NOT FOUND!',Job.FnameFixed)
 
 %% write command:
-cmd = sprintf('antsApplyTransforms -d 3 -o [%s,1] -r %s ', ...
-  Job.FnameOut, Job.FnameFixed);
+cmd = sprintf('antsApplyTransforms -d 3 -o [%s,1] -r %s ', Job.FnameOut, Job.FnameFixed);
 for itrans = 1:size(Job.Transforms,1)
-  cmd = [cmd sprintf(' -t [%s,%i] ', ...
-    Job.Transforms{itrans,1}, Job.Transforms{itrans,2})];
+  cmd = [cmd sprintf(' -t [%s,%i] ', Job.Transforms{itrans,1}, Job.Transforms{itrans,2})];
 end
 
 %% run command:
-system(cmd);
-assert(isfile(Job.FnameOut))
+mysystem(cmd);
 end
 
 function TEST()

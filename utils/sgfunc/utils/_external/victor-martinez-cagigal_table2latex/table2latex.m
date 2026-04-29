@@ -25,14 +25,15 @@
 %   Date:    09/10/2018                                                   %
 %   E-mail:  vicmarcag (at) gmail (dot) com                               %
 % ----------------------------------------------------------------------- %
-function table2latex(T, filename, isElife, endNote)
+
+function table2latex(T, filename)
 
 % Error detection and default parameters
 if nargin < 2
   filename = 'table.tex';
   fprintf('Output path is not defined. The table will be written in %s.\n', filename);
 elseif ~ischar(filename)
-  error('The output file name must be a string.');
+  error('The output file name must be a character array.');
 else
   if ~strcmp(filename(end-3:end), '.tex')
     filename = [filename '.tex'];
@@ -40,12 +41,19 @@ else
 end
 if nargin < 1, error('Not enough parameters.'); end
 if ~istable(T), error('Input must be a table.'); end
-if nargin < 3, isElife = false; end
+% if nargin < 3, isElife = false; end
 
 % Parameters
 n_col = size(T,2);
 col_spec = [];
-for c = 1:n_col, col_spec = [col_spec 'l']; end
+for c = 1:n_col
+  V = T(1,c).Variables;
+  if isequal(V{1}(1),'$')
+    col_spec = [col_spec 'r'];
+  else
+    col_spec = [col_spec 'l'];
+  end
+end
 col_names = strjoin(T.Properties.VariableNames, ' & ');
 row_names = T.Properties.RowNames;
 if ~isempty(row_names)
@@ -56,15 +64,15 @@ end
 % Writing header
 fileID = fopen(filename, 'w');
 fprintf(fileID, '\\begin{tabular}{%s}\n', col_spec);
-if isElife
-  fprintf(fileID, '\\toprule \n');
-end
+% if isElife
+%   fprintf(fileID, '\\toprule \n');
+% end
 fprintf(fileID, '%s \\\\ \n', col_names);
-if isElife
-  fprintf(fileID, '\\midrule \n');
-else
+% if isElife
+%   fprintf(fileID, '\\midrule \n');
+% else
   fprintf(fileID, '\\hline \n');
-end
+% end
 
 % Writing the data
 try
@@ -88,15 +96,15 @@ catch
 end
 
 % Closing the file
-if isElife
-  fprintf(fileID, '\\bottomrule \n');
-else
+% if isElife
+%   fprintf(fileID, '\\bottomrule \n');
+% else
   fprintf(fileID, '\\hline \n');
-end
+% end
 fprintf(fileID, '\\end{tabular}');
 
-if isElife && nargin==4
-  fprintf(fileID, '\\medskip \\\\ \n%s\n',endNote);
-end
+% if isElife && nargin==4
+%   fprintf(fileID, '\\medskip \\\\ \n%s\n',endNote);
+% end
 fclose(fileID);
 end

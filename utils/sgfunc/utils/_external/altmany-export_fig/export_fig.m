@@ -117,9 +117,12 @@ function [imageData, alpha] = export_fig(varargin) %#ok<*STRCL1,*DATST,*TNOW1>
 %   -transparent=<color> convert all pixels in the specified color (RGB tripplet
 %             or a Matlab predefined color string e.g. 'r'). Usage examples:
 %             -transparent=g or -transparent=[1,.5,.2] or -transparent=80,65,235
-%             Optional suffix +-<value> adds tolerance to pixels color matching
-%             for example: -transparent=g+-30 or -transparent=[1,.5,.2]+-0.1
-%             Note: only supported by PNG,GIF,TIF formats.
+%   -transparent=<color>+-<value> adds optional tolerance to bgcolor matching.
+%             For example: -transparent=g+-30 or -transparent=[1,.5,.2]+-0.1
+%             <color> may be omitted, e.g. -transparent+-8 or -transparent=+-.03
+%             Default tolerance is 0.1 (or 25 in [0,255] units), to reduce color
+%             artifacts around letters and line edges. Note: transparent color
+%             customization is only supported by PNG,GIF,TIF formats.
 %   -nocrop - option indicating that empty margins should not be cropped.
 %   -c[<val>,<val>,<val>,<val>] - option indicating crop amounts. Must be
 %             a 4-element vector of numeric values: [top,right,bottom,left]
@@ -406,6 +409,13 @@ function [imageData, alpha] = export_fig(varargin) %#ok<*STRCL1,*DATST,*TNOW1>
 % 02/05/24: (3.45) Display the builtin error message when uifigure cannot be exported (issue #387); fixed contour labels with non-default FontName incorrectly exported as Courier (issue #388)
 % 09/05/24: (3.46) Added -xkcd option (thanks @slayton); added .fig input and output format (previously undocumented & buggy); redirect .tex output to matlab2tikz utility
 % 05/11/24: (3.47) Fixed -transparency in case the default bgcolor is already used in the figure (issue #398); enabled specifying non-default transparency color via -transparency parameter; suppress warnings about setting figure position; multiple -xkcd fixes
+% 06/03/25: (3.48) Fixed -transparency color artifacts, set default bgcolor tolerance of +-0.1 (issue #400)
+% 31/03/25: (3.49) Fixed(?) -transparency in PDF/EPS files (issue #401); override Matlab's default Title & Creator meta-data (issue #402)
+% 31/03/25: (3.50) Revert bad fix for issue #401
+% 08/07/25: (3.51) Fixed: figure with non-default colormap exported with default colormap in some cases (issue #389)
+% 07/09/25: (3.52) Fixed: sgtitle was cropped in transparent PDF/EPS output (thanks @JohanWesto)
+% 12/09/25: (3.53) Fixed error in case of escaped tex/latex chars in EPS/PDF Title (issue #407)
+% 16/10/25: (3.54) Fixed error in case of latex-format axes title (issue #409)
 %}
 
     if nargout
@@ -443,7 +453,7 @@ function [imageData, alpha] = export_fig(varargin) %#ok<*STRCL1,*DATST,*TNOW1>
     [fig, options] = parse_args(nargout, fig, argNames, varargin{:});
 
     % Check for newer version and exportgraphics/copygraphics compatibility
-    currentVersion = 3.47;
+    currentVersion = 3.54;
     if options.version  % export_fig's version requested - return it and bail out
         imageData = currentVersion;
         return
@@ -491,7 +501,8 @@ function [imageData, alpha] = export_fig(varargin) %#ok<*STRCL1,*DATST,*TNOW1>
                 % Create an invisible legacy figure at the same position/size as the uifigure
                 hNewFig = figure('Visible','off',    'Color',hFig.Color, ...
                                  'Units',hFig.Units, 'Position',hFig.Position, ...
-                                 'MenuBar','none',   'ToolBar','none');
+                                 'MenuBar','none',   'ToolBar','none', ...
+                                 'Colormap',hFig.Colormap);  % issue #389
                 % Copy the uifigure contents onto the new invisible legacy figure
                 try
                     hChildren = allchild(hFig); %=uifig.Children;
@@ -1045,6 +1056,9 @@ function [imageData, alpha] = export_fig(varargin) %#ok<*STRCL1,*DATST,*TNOW1>
                     elseif ~options.png && ~options.tif && ~options.silent  % issue #168
                         warning('export_fig:transparency', '%s ScreenCapture utility on the Matlab File Exchange: http://bit.ly/1QFrBip', msg);
                     end
+                %elseif options.transparent %issue #401
+                    % https://www.mathworks.com/matlabcentral/answers/452533-using-painters-saving-to-eps-does-not-give-transparency
+                    %hasTransparency = true;  % bypass the warning message above (BAD FIX!)
                 elseif ~isempty(hImages)
                     % Fix for issue #230: use OpenGL renderer when exported image contains transparency
                     for idx = 1 : numel(hImages)
@@ -1130,6 +1144,10 @@ function [imageData, alpha] = export_fig(varargin) %#ok<*STRCL1,*DATST,*TNOW1>
                     try hCBs = getappdata(hAxes,'LayoutPeers'); catch, hCBs=[]; end  %issue #383
                     hCBs = unique([findall(fig,'tag','Colorbar'), hCBs]);
                     hCbTxt = fixBlackText(hCBs,'Title'); % issue #382
+
+                    % Fix subplot grid title (sgtitle) issue #406
+                    hSpTxt = findobj(fig,'Type','subplottext');
+                    hSpTxt = fixBlackText(hSpTxt,'');
                 end
                 % Generate an eps
                 print2eps(tmp_nam, fig, options, printArgs{:}); %winopen(tmp_nam)
@@ -1147,6 +1165,7 @@ function [imageData, alpha] = export_fig(varargin) %#ok<*STRCL1,*DATST,*TNOW1>
                     set(hZrs, 'Color', [0,0,0]);
                     set(hTitle,'Color',[0,0,0]);
                     set(hCbTxt,'Color',[0,0,0]);
+                    set(hSpTxt,'Color',[0,0,0]);
                 end
                 %}
                 % Restore the figure's previous background color (if modified)
@@ -1709,7 +1728,7 @@ function options = default_options()
         'crop_amounts',    nan(1,4), ...  % auto-crop all 4 image sides
         'transparent',     false, ...
         'tcol',            [], ...
-        'ttol',            0, ...
+        'ttol',            uint8(25), ... % in [0,255] RGB color units
         'renderer',        0, ...         % 0: default, 1: OpenGL, 2: ZBuffer, 3: Painters
         'pdf',             false, ...
         'eps',             false, ...
@@ -1791,7 +1810,7 @@ function [fig, options] = parse_args(nout, fig, argNames, varargin)
         else %if ischar(thisArg) && ~isempty(thisArg)
             if thisArg(1) == '-'
                 addToOptionsStr = true;
-                [thisArg,extra] = strtok(thisArg,'=');
+                [thisArg,extra] = strtok(thisArg,{'=','+'});
                 switch lower(thisArg(2:end))
                     case 'nocrop'
                         options.crop = false;
@@ -1816,11 +1835,18 @@ function [fig, options] = parse_args(nout, fig, argNames, varargin)
                                 options.tcol = defaultColors(colIdx,:);
                             else
                                 tcol = str2num(extra); %#ok<ST2NM>
-                                assert(isequal(size(tcol),[1,3]),'export_fig:invalid_tcol','Invalid transparent color %s specified',extra);
-                                if all(tcol <= 1) %fractional values
-                                    tcol = 255 * tcol; %[0-1] => [0-255]
+                                if numel(tcol)==1 && isempty(tol)
+                                    if tcol <= 1 %fractional value
+                                        tcol = 255 * tcol; %[0-1] => [0-255]
+                                    end
+                                    options.ttol = uint8(tcol);
+                                else
+                                    assert(isequal(size(tcol),[1,3]),'export_fig:invalid_tcol','Invalid transparent color %s specified',extra);
+                                    if all(tcol <= 1) %fractional values
+                                        tcol = 255 * tcol; %[0-1] => [0-255]
+                                    end
+                                    options.tcol = uint8(tcol);
                                 end
-                                options.tcol = uint8(tcol);
                             end
                             if length(tol) > 2
                                 tol = tol(3:end);  % discard '+-'
@@ -2400,12 +2426,14 @@ function [A, bgcol, alpha] = getFigImage(fig, magnify, renderer, options, pos)
     if options.transparent
         % Modify the figure's bgcolor to off-white
         if isempty(options.tcol)
-            bgcol = uint8(254*[1,1,1]);  %default bgcolor =off-white
+            bgcol = uint8([255,255,254]);  %default bgcolor =off-white
+            white = uint8([255,255,255]);
 
             % Determine off-white shade not already used in the fig - issue #398
             A = getFigImage2(fig, magnify, renderer, options);  % get RGB tripplets
-            A = unique(reshape(A,[],3),'rows');    % reshape [m,n,3] => [m*n,3]
-            A = sum(double(A).*(256.^[2,1,0]),2);  % convert RGB tripplets => int
+            A = reshape(A,[],3);    % reshape [m,n,3] => [m*n,3]
+            A = unique([A; white], 'rows'); % add pure white  %issue #400
+            A = sort(sum(double(A).*(256.^[2,1,0]),2)); % convert RGB tripplets => int
             d = A(find(diff(A)>1,1,'last')+1) - 1; %=largest RGB value -1 (off-white)
             if ~isempty(d)
                 n=2; while n>=0, p=256^n; bgcol(3-n)=floor(d/p); d=rem(d,p); n=n-1; end %int => RGB tripplet
@@ -2576,7 +2604,11 @@ end
 
 function hText = fixBlackText(hObject, propName)
     try
-        hText = get(hObject, propName);
+        if isempty(propName)  %issue #406
+            hText = hObject;
+        else
+            hText = get(hObject, propName);
+        end
         try hText = [hText{:}]; catch, end  %issue #383
         for idx = numel(hText) : -1 : 1
             hThisText = hText(idx);

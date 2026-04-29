@@ -7,14 +7,14 @@ if ~nargin, help(mfilename); return; end
 if ~exist('cfg','var'), cfg = []; end
 [p2,f2,~] = myfileparts(fn_unwarped);
 fn_gif = [p2,'/',f2,'.gif'];
+
 if ~isfield(cfg,'figureposition')
-%   cfg.figureposition = get(0,'DefaultFigurePosition');
-  cfg.figureposition = [1 1 150*5*3 150*5*3];
+  cfg.figureposition = [1 1 150*9 150*1];
 end
 cfg.figurehandle = figure('color','k', 'position',cfg.figureposition,'visible','off');
 cfg.contour = fn_t1w;
-cfg.xyz = 'axi25';
-cfg.layout = [5 5];
+cfg.xyz = 'sag9';
+cfg.layout = [1 9];
 I = {fn_distorted, fn_unwarped};
 [Img] = niftireadgz(fn_distorted);
 Img = mean(double(Img),4);
@@ -25,10 +25,11 @@ ColorMaps = {gray, bone};
 for i = 1:2
   clf
   cfg.basecolormap = ColorMaps{i};
+  cfg.contourwidth = 3;
   slices(I{i}, [], cfg)
   axes('position',[0 0 1 0.93])
-  ht = title(Title{i},'color','w', 'interp','none','fontweight','normal',...
-    'horizontalAlignment','left','position',[0.001 1.0092 0.5]);
+  ht = title(Title{i},'color','w', 'interp','none', 'fontweight','normal', 'horizontalAlignment', ...
+    'left','position',[0.001 1.0092 0.5]);
   axis off
   gifani(gcf, fn_gif, i, delay_sec(i));
 end

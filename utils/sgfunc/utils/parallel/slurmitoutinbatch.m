@@ -4,7 +4,8 @@ function slurmitoutinbatch(FuncHandle, Jobs, varargin)
 % SEE ALSO: SLURMITOUT
 % (cc) 2022-2023, dr.seunggoo.kim@gmail.com
 
-BatchSize = varargin{3}.BatchSize;
+%BatchSize = varargin{3}.BatchSize;
+BatchSize = 1000; % just the current limit
 nBatch = ceil(numel(Jobs)/BatchSize);
 iBatch = 1;
 while not(isempty(Jobs))

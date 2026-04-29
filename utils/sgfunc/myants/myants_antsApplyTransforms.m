@@ -5,10 +5,9 @@ function Job = myants_antsApplyTransforms(Job)
 %  .FnameFixed
 %  .FnameMoving
 % (.FnameOut)
-% (.odt)
-% (.interpolation)   'linear' | 'NearestNeighbor' | {'BSpline[<order=3>]'}
-%                    | 'LanczosWindowedSinc' | and more...
-%  .transforms       {Nx2} filenames in 1st col, useInverse in 2nd col
+% (.Interpolation)   'Linear' | 'NearestNeighbor' | {'BSpline[<order=3>]'} | 'LanczosWindowedSinc' |
+%                    'MultiLabel[<sigma=imageSpacing>,<alpha=4.0>]' | 'GenericLabel[<interpolator=Linear>]' | ...
+%  .Transforms       {Nx2} filenames in 1st col, useInverse in 2nd col
 % (.IsCreateFig)     0 = no figure | 1 = warped slices (default)
 %
 % NOTE: for transform A -> B -> C: {A-to-B},{B-to-C}
@@ -44,8 +43,8 @@ if ~isfield(Job,'FnameOut')
   prefix = [p2,'/',f2,'_in_',f1];
   Job.FnameOut = [prefix,'.nii.gz'];
 end
-if ~isfield(Job,'interpolation')
-  Job.interpolation = 'BSpline[3]';
+if ~isfield(Job,'Interpolation')
+  Job.Interpolation = 'BSpline[3]';
 end
 if ~isfield(Job,'IsCreateFig')
   Job.IsCreateFig = true;
@@ -57,7 +56,7 @@ if ~isfield(Job,'odt')
   switch (info.Datatype)
     case 'int16'
       datatype = 'short';
-    case {'single', 'int32'}
+    case {'single', 'int32','double'}
       datatype = 'float';
     otherwise
       error('FIXME!')
@@ -68,15 +67,15 @@ end
 
 %% antsApplyTransforms
 cmd = sprintf('antsApplyTransforms -d %i -i %s -r %s -o %s -n %s -u %s ', ...
-  3, Job.FnameMoving, Job.FnameFixed, Job.FnameOut, Job.interpolation, datatype);
-% concatenate transforms:
+  3, Job.FnameMoving, Job.FnameFixed, Job.FnameOut, Job.Interpolation, datatype);
+% concatenate Transforms:
 for i=1:size(Job.Transforms,1)
   cmd = [cmd, sprintf(' --transform [%s,%i]', Job.Transforms{i,1}, Job.Transforms{i,2})];
 end
 if not(Job.IsCreateFig)
   cmd = [cmd, ' -v 0 '];
 end
-system(cmd);
+mysystem(cmd);
 
 %% visualize results
 if Job.IsCreateFig

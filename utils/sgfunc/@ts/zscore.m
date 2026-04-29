@@ -1,4 +1,4 @@
-function Ts = zscore(Ts, isZscore)
+function ts = zscore(ts, isZscore)
 %ts/zscore standardizes the data while keeping original means and stds in .DataInfo.UserData.Zscore
 %   TSOUT = ZSCORE(TSIN, ISZSCORE)
 %   TSIN is an input TS object.
@@ -8,16 +8,16 @@ function Ts = zscore(Ts, isZscore)
 %Example:
 %TsOut = zscore(TsIn, 1)
 
-if not(isfield(Ts.DataInfo.UserData, 'Zscore'))
-  Ts.DataInfo.UserData.Zscore.IsDone = false;
+if not(isfield(ts.DataInfo.UserData, 'Zscore'))
+  ts.DataInfo.UserData.Zscore.IsDone = false;
 end
-if not(Ts.DataInfo.UserData.Zscore.IsDone) && isZscore
-  Ts.DataInfo.UserData.Zscore.OrigMean = mean(Ts);
-  Ts.DataInfo.UserData.Zscore.OrigStd = std(Ts);
-  Ts.Data = (Ts.Data - Ts.DataInfo.UserData.Zscore.OrigMean) ./ Ts.DataInfo.UserData.Zscore.OrigStd;
-  Ts.DataInfo.UserData.Zscore.OrigUnits = Ts.DataInfo.Units;
-  Ts.DataInfo.Units = 'Z-sc';
+if not(ts.DataInfo.UserData.Zscore.IsDone) && isZscore
+  ts.DataInfo.UserData.Zscore.OrigMean = mean(ts);
+  ts.DataInfo.UserData.Zscore.OrigStd = std(ts);
+  ts.Data = (ts.Data - ts.DataInfo.UserData.Zscore.OrigMean) ./ ts.DataInfo.UserData.Zscore.OrigStd;
+  ts.DataInfo.UserData.Zscore.OrigUnits = ts.DataInfo.Units;
+  ts.DataInfo.Units = 'Z-sc';
 end
-Ts.DataInfo.UserData.Zscore.IsDone = isZscore;
+ts.DataInfo.UserData.Zscore.IsDone = isZscore;
 
 end

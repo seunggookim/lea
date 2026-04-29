@@ -11,9 +11,6 @@ function Job = myspm_norm(Job)
 % (cc) 2015, sgKIM, solleo@gmail.com
 if nargin==0, help(mfilename); return; end
 spm('Defaults','fmri');
-% this is SPM12-included batch process using SPM12
-a=spm('version');
-if ~strcmp(a(4:5),'12'),  error(['Run ',mfilename,' on SPM12!']);  end
 if ~isfield(Job,'interp'), Job.interp = 4; end % 4-spline as default
 
 fnames={};

@@ -1,4 +1,4 @@
-function Job = mypbt_test(Job)
+function Job = myptb_test(Job)
 
 
 %% DISPLAY TEST1
@@ -47,7 +47,7 @@ fid = fopen(FnameMouse, 'w');
 fprintf(fid, 'dT[msecs]\txc\tyc\txi\tyi\tvx\tvy\twheel\n'); % WRITE the header line
 fclose(fid); % flush
 
-while ()
+while (true)
   while KbEventAvail(DevIdx)  % are there any events?
     Event = KbEventGet(d);  % READ the event
     if Event.Type == 1  % Is the event MOTION?
@@ -74,5 +74,66 @@ end
 KbQueueStop(DevIdx);  % stop queueing events
 KbQueueRelease(DevIdx); % clean up the queue
 
+
+end
+=======
+function Job = myptb_test(Job)
+if not(exist('Job','var')), Job = []; end
+Job = defaultjob(struct(SkipMouse=false, SkipSound=false), Job);
+
+Job = myptb_init(Job);
+
+%% DISPLAY TEST1
+ScreenText = ['A puretone (1 kHz, 1 sec) is presented.\n',...
+  '*PRESS ANY KEY IF YOU HEARD IT*'];
+DrawFormattedText(Job.PtrWin, ScreenText, 'center', 'center', ...
+  Job.TextColor, [], [], [], Job.Vspace);
+Screen(Job.PtrWin,'Flip');
+
+%% SOUND TEST: 1 sec 1kHz
+Y = sin(linspace(0, 1, Job.AudioSrateHz)*1000*pi)*0.2;
+PsychPortAudio('Fillbuffer', Job.PtrAud, [Y; Y]);
+PsychPortAudio('Volume', Job.PtrAud, 1);
+PsychPortAudio('Start', Job.PtrAud, 1, 0, 0);
+
+%% KEYBOARD TEST
+KbReleaseWait;         % wait for all keys released
+TARGET_KEYSTATUS = 0;  % 0=pressed, 1=released, 2=released>pressed, 3=released>pressed>released
+if Job.SkipSound
+  Y = sin(linspace(0,1,Job.AudioSrateHz)*1000*pi)*0.2;
+  PsychPortAudio('Fillbuffer', Job.PtrAud, [Y; Y]);
+  PsychPortAudio('Volume', Job.PtrAud, 1);
+  PsychPortAudio('Start', Job.PtrAud, 1, 0, 0);
+end
+
+%% KEYBOARD TEST
+KbReleaseWait;  % wait for all keys released
+TARGET_KEYSTATUS = 0;
+% 0=pressed, 1=released, 2=released>pressed, 3=released>pressed>released
+Now_sec = GetSecs;
+[Pressed_sec, IsKey] = KbWait([], TARGET_KEYSTATUS);
+
+%% DISPLAY TEST2
+ScreenText = sprintf('*KEY PRESSED*\nKeyId=[%i], Time=%f sec', ...
+  find(IsKey), Pressed_sec-Now_sec);
+DrawFormattedText(Job.PtrWin, ScreenText, 'center', 'center', ...
+  Job.TextColor, [], [], [], Job.Vspace);
+Screen(Job.PtrWin,'Flip');
+
+% %% MOUSE TRACE TEST
+% if Job.SkipMouse
+%   Job.AxesLabels = {'X+ [sw]','Y+ [LOOONGER WORD]',...
+%     '01234567890123456789','01234567890123456789'};
+%   Job = myptb_tracemouse(Job);
+% end
+
+%% TRIGGER TEST
+
+
+%% EYELINK TEST
+
+
+%% END TEST
+sca
 
 end

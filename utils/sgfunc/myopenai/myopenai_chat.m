@@ -3,10 +3,10 @@
 % Job = myopenai_getembedding(Job)
 %
 %Job
+%  .KeyLoc     location of the API key on the local computer
 %  .Input      a character array
 %  .FnameChat  a filename to save
 % (.Model)    'gpt-4o-2024-08-06' (defalt) | 'o1' (reasoning model)
-% (.KeyLoc)   '~/Documents/OpenAI/proj-key.txt' (default)
 % 
 % (CC4-BY) seung-goo.kim@ae.mpg.de
 
@@ -24,7 +24,7 @@ Request body:
 
 Job = defaultjob(struct( ...
   ServerUrl='https://api.openai.com/v1/chat/completions', Model='gpt-4o-2024-08-06', ...
-  KeyLoc='~/Library/Mobile Documents/com~apple~CloudDocs/Documents/OpenAI/proj-key.txt' ...
+  KeyLoc='' ...
   ), ...
   Job, mfilename);
 if isfile(Job.FnameChat)

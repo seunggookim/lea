@@ -8,7 +8,7 @@ function tbl = compute_peta2(tbl)
 % (1) PARTIAL ETA^2 = (SS_effect) / (SS_effect + SS_error)
 
 % (2) (equivalent) pETA^2 = (F*df1) / (F*df1 + df2)
-% REF: Lakens, 2013, https://doi.org/10.3389/fpsyg.2013.00863
+% REF: Lakens, 2013, https://doi.org/10.3389/fpsyg.2013.00863 (Eq. 13)
 
 
 

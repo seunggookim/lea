@@ -1,4 +1,4 @@
-function save(Ts, fnameTs)
+function save(ts, fnameTs)
 %ts.save saves a TS object in a .TS/.HD pair
 %   SAVE(TSTOSAVE, FILENAME)
 %   TSTOSAVE is a TS object to save.
@@ -7,19 +7,19 @@ function save(Ts, fnameTs)
 %Example:
 %save(Ts, "example.ts")
 
-assert(Ts.TimeInfo.isUniform, 'Sorry!:( TS class only handles a uniform time vector for the efficiency of data I/O.')
-assert(isequal(class(Ts), 'ts'))
+assert(ts.TimeInfo.isUniform, 'Sorry!:( TS class only handles a uniform time vector for the efficiency of data I/O.')
+assert(isequal(class(ts), 'Ts'))
 assert(contains(fnameTs, '.ts'))
-precision = class(Ts.Data);
+precision = class(ts.Data);
 fnameHdr = strrep(fnameTs, '.ts',  '.hd');
 fid = fopen(fnameTs, 'w');
-fwrite(fid, Ts.Data(:), precision);
+fwrite(fid, ts.Data(:), precision);
 fclose(fid);
 
-Ts.UserData.('OrigTimeInfo') = Ts.TimeInfo;
-Ts.DataInfo.UserData.('MatrixDimension') = size(Ts.Data);
-Ts.DataInfo.UserData.('Precision') = precision;
-Ts.UserData.('OrigDataInfo') = Ts.DataInfo;
-Ts = delsample(Ts, 'Index',1:Ts.TimeInfo.Length);
-save(fnameHdr, 'Ts', '-MAT', '-nocompression');
+ts.UserData.('OrigTimeInfo') = ts.TimeInfo;
+ts.DataInfo.UserData.('MatrixDimension') = size(ts.Data);
+ts.DataInfo.UserData.('Precision') = precision;
+ts.UserData.('OrigDataInfo') = ts.DataInfo;
+ts = delsample(ts, 'Index',1:ts.TimeInfo.Length);
+save(fnameHdr, 'ts', '-MAT', '-nocompression');
 end

@@ -1,17 +1,21 @@
-function [Job, Mdl, Rnd] = lea_test(Job)
-% [Job, Mdl, Rnd] = lea_test(Job)
+function [Job, Out] = lea_test(Job)
+% [Job, Out] = lea_test(Job)
 
 % set up parameters🍽️:
 if not(nargin); Job = []; end
 disp(repmat('=',[1 80]))
 Job = defaultjob(struct(nSamples=50, nFeatures=2, nResponses=3, nSets=4, ...
-  EffectSize=1, SamplingRateHz=1, DelaysSmp=[0, 1], RelToiSec=[2 -2], ...
+  EffectSize=1, SampleRateHz=1, DelaysSmp=[0, 1], RelToiSec=[2 -2], IsComputeItc=1, ...
   LambdaGrid=10.^(-5:0.5:5), nRands=1000, IsPlot=false, IsVerbose=false, ...
-  SmoothingFactor=0, IsAssert=true, CvDesign='loocv', IsKeepRandBetaHat=false), Job, mfilename);
+  SmoothingFactor=0.5, IsAssert=true, CvDesign='loocv', IsKeepRandBetaHat=false), Job, mfilename);
 disp(Job)
 
 % generate toy data🧸:
-[dataX, dataY] = generatetoy(Job);
+[Job.FnamesX, Job.FnamesY] = generatetoy(Job);
+
+% prepare data🍱:
+logthis('READING DATA!\n')
+[dataX, dataY, Itc] = prepdata(Job);
 
 % run cv folds🏃‍♀️‍➡️‍:
 Job.FnameMdl = fullfile(tempname, 'mdl.mat');
@@ -42,6 +46,12 @@ end
 
 if Job.IsAssert
   logthis('ALL PASSED!\n')
+end
+
+Out = struct(Mdl=Mdl, Rnd=Rnd, Itc=Itc);
+
+if not(nargout)
+  clear Job Out
 end
 
 end

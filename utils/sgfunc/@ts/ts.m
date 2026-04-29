@@ -1,7 +1,7 @@
-classdef ts < timeseries
+classdef Ts < timeseries
   %TS is a custom subclass of MATLAB's TIMESERIES class
   %
-  % <a href="matlab:help ts">TS</a>: create an instance
+  % <a href="matlab:help Ts">TS</a>: create an instance
   % >> Ts = ts(dataMatrix, timeVector)
   %
   % <a href="matlab:help ts/save">SAVE</a>: save in a .TS/.HD pair
@@ -37,44 +37,27 @@ classdef ts < timeseries
 
   methods(Static)
 
-    function Ts = load(fnameTs)
+    function ts = load(fnameTs)
       %TS.LOAD loads a TS object from a .TS/.HD pair
-      %   TS = ts.load(FILENAME)
+      %   ts = TS.load(FILENAME)
       %   FILENAME is a character vector or a string scalar as 'example.ts' or "example.ts"
       %   TSTOSAVE is a loaded TS object.
       %
       %Example:
-      %Ts = ts.load('example.ts')
+      %ts = Ts.load('example.ts')
 
       fnameTs = char(fnameTs);
       assert( contains(fnameTs, '.ts'), 'Input filename "%s" does not look like a TS file!', fnameTs)
       assert( isfile(fnameTs), 'File "%s" not found!', fnameTs)
 
-%       % READING-LOCK MECHANISM----------------------------------------------------------------------------
-%       % THIS IS TO AVOID I/O ERROR(9) EBADF [error BAD file descriptor] THAT CAN BE CAUSED WHEN RUNNING 
-%       % ON SLURM: 200+ PROCESSES SIMULTANEOUSLY TRY TO ACCESS THE SAME FILE.
-%       fnameLock = strrep(fnameTs, '.ts', '.lock');        % READING-LOCK FILE
-%       while isfile(fnameLock)                             % WAIT if it is locked
-%         pause(rand/2+.5)                                  % WAIT 500-1000 msec UNTIL CHECKING AGAIN
-%       end
-%       system(['touch ', fnameLock]);                      % LOCK it when start reading
-%       load(strrep(fnameTs, '.ts', '.hd'), '-MAT', 'Ts');
-%       origTimeInfo = Ts.UserData.OrigTimeInfo;
-%       origDataInfo = Ts.UserData.OrigDataInfo;
-%       fid = fopen(fnameTs, 'r');
-%       data = fread(fid, origDataInfo.UserData.MatrixDimension, origDataInfo.UserData.Precision);
-%       fclose(fid);
-%       lockCleaner = onCleanup(@() eval(sprintf('delete("%s")',fnameLock)));     % Will delete the lock when exit this function
-%       %---------------------------------------------------------------------------------------------------
-
-      load(strrep(fnameTs, '.ts', '.hd'), '-MAT', 'Ts');
-      origTimeInfo = Ts.UserData.OrigTimeInfo;
-      origDataInfo = Ts.UserData.OrigDataInfo;
+      load(strrep(fnameTs, '.ts', '.hd'), '-MAT', 'ts');
+      origTimeInfo = ts.UserData.OrigTimeInfo;
+      origDataInfo = ts.UserData.OrigDataInfo;
       fid = fopen(fnameTs, 'r');
-      Ts = addsample(Ts, 'Time', (origTimeInfo.Start : origTimeInfo.Increment : origTimeInfo.End)', ...
+      ts = addsample(ts, 'Time', (origTimeInfo.Start : origTimeInfo.Increment : origTimeInfo.End)', ...
         'Data', fread(fid, origDataInfo.UserData.MatrixDimension, origDataInfo.UserData.Precision));
       fclose(fid);
-      Ts = setuniformtime(Ts, 'Interval', origTimeInfo.Increment);
+      ts = setuniformtime(ts, 'Interval', origTimeInfo.Increment);
     end
 
 
@@ -83,9 +66,9 @@ classdef ts < timeseries
       %TS.TEST runs a batch of unit tests
       %
       %Example:
-      %ts.test()                 % runs all batches
-      %ts.test("io")             % runs the 'io' batch
-      %ts.test(["io","std"])     % runs the 'io' batch and 'std' batch
+      %Ts.test()                 % runs all batches
+      %Ts.test("io")             % runs the 'io' batch
+      %Ts.test(["io","std"])     % runs the 'io' batch and 'std' batch
       if not(nargin)
         todo = ["io", "std"];
       end
@@ -103,7 +86,7 @@ classdef ts < timeseries
       end
 
       function writeandreadthis(precision, dimensions)
-        a = ts(randi(255, dimensions, precision), 'Name','eeg');
+        a = Ts(randi(255, dimensions, precision), 'Name','eeg');
         a.DataInfo.Units = 'uV';
         fname = [tempname,'.ts'];
         tic; save(a, fname); fprintf('saving a TS [%s: %i x %i]: ', upper(precision), dimensions);
@@ -112,7 +95,7 @@ classdef ts < timeseries
         fprintf('> DATA FILE SIZE = %s\n', formatbytes(s.bytes))
         s = dir(strrep(fname, '.ts', '.hd'));
         fprintf('> HEADER FILE SIZE = %s\n', formatbytes(s.bytes))
-        tic; b = ts.load(fname); fprintf('loading a TS [%s: %i x %i]: ', upper(precision), dimensions);
+        tic; b = Ts.load(fname); fprintf('loading a TS [%s: %i x %i]: ', upper(precision), dimensions);
         fprintf('TOOK %s\n', duration(seconds(toc), Format='mm:ss.SSS'))
         assert(isequal(a.Data ,b.Data))
         assert(isequal(a.Time ,b.Time))
@@ -130,7 +113,7 @@ classdef ts < timeseries
           otherwise
             error('precision="%s" not allowed for too large errors! Use SINGLE or DOUBLE')
         end
-        a = ts(rand(dimensions, precision), 'Name','fmri');
+        a = Ts(rand(dimensions, precision), 'Name','fmri');
         a.DataInfo.Units = 'au';
         fprintf('created a random TS [%s: %i x %i]\n',precision, dimensions)
 
@@ -175,9 +158,9 @@ classdef ts < timeseries
 
 
     %%
-    function Ts = ts(varargin)
+    function ts = Ts(varargin)
       %TS() calls the timeseries constructor
-      Ts@timeseries(varargin{:})
+      ts@timeseries(varargin{:})
     end
 
   end % of static methods

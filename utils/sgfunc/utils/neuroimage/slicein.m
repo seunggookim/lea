@@ -88,7 +88,8 @@ if isfield(cfg,'contour')
       cfg.contour{icon} = double(cfg.contour{icon});
     end
     if isnumeric(cfg.contour{icon})
-      cfg.contour{icon} = struct('vol',cfg.contour{icon}, 'vox2ras',base.vox2ras);
+      cfg.contour{icon} = struct('vol',cfg.contour{icon}, ...
+        'vox2ras',base.vox2ras);
     end
     % make sure all have .vol and .vox2ras:
     cfg.contour{icon} = helper_conform(cfg.contour{icon});
@@ -135,10 +136,10 @@ if ischar(cfg.xyz)
         xyzdim = 3;
     end
     nslices = str2double(cfg.xyz(irow,4:end)); % # slices for this row
-
+    
     % equidistance over a volume (Data if exist; otherwise BASE)
-    bbox = bbox_base; % Why data? when it is useful? when you have sparse data consistently across all conditions, 
-                      % but if not this can be inconvenient.
+    bbox = bbox_base; % Why data? when it is useful? when you have sparse data consistently across all conditions,
+    % but if not this can be inconvenient.
     coords = linspace(bbox(xyzdim,1), bbox(xyzdim,2), nslices+2);
     xyz_add = nan(nslices,3);
     xyz_add(:,xyzdim) = sort(coords(2:end-1)); % excluding both ends
@@ -156,6 +157,30 @@ end
 % background color of the coordinate label, color, size...
 
 
+% %% LAYOUT
+% if ~isfield(cfg,'layout')
+%   cfg.layout = [ceil(sqrt(nslices)) ceil(sqrt(nslices))];
+% end
+% if nslices > prod(cfg.layout)
+%   error('nslices > prod(cfg.layout)')
+% end
+
+% if ~isfield(cfg,'sliceaxes')
+%   if ~cfg.showticks
+%     cfg.sliceaxes = axeslayout(cfg.layout, [0 0 0 0],[0 0 0 0]);
+%   else
+%     cfg.sliceaxes = axeslayout(cfg.layout, [0.1 0 0 0.1],[0 0 0 0]);
+%   end
+% end
+
+% %% Figure
+% if ~isfield(cfg,'figureposition')
+%   figpos = get(0,'defaultFigurePosition');
+%   cfg.figureposition = [figpos(1:2)  150*cfg.layout(2) 150*cfg.layout(1)];
+% end
+% if ~isfield(cfg,'figurecolor')
+%   cfg.figurecolor = 'k';
+% end
 
 %% Color range
 % DATA:
@@ -181,8 +206,6 @@ end
 if ischar(cfg.caxis)
   if strcmp(cfg.caxis,'minmax')
     cfg.caxis = [min(numvals) max(numvals)];
-  elseif strcmp(cfg.caxis,'maxabs')
-    cfg.caxis = [-1 +1]*max(abs(numvals));
   end
 end
 if ~isfield(cfg,'thres')
@@ -235,136 +258,145 @@ end
 clear numvals
 
 %% M A I N ================================================================
-
+% %% -- Initialize figure
+% if ~isfield(cfg,'figurehandle')
+%   cfg.figurehandle = figure;
+% else
+%
+% end
+% set(gcf, 'position', cfg.figureposition, 'color', cfg.figurecolor);
+% if isfield(cfg,'fname_png') % if fname_png is given, make it invisible
+%   set(gcf,'visible','off')
+% end
 
 %% -- DRAW a SINGLE slice
 H = struct();
 % for iaxes = 1:nslices
 iaxes = 1;
 
-  % Set axes
-  H(iaxes).baseaxes = axes(Position=get(cfg.axes, 'Position'));
-  grid(H(iaxes).baseaxes,'on')
+% Set axes
+H(iaxes).baseaxes = axes(Position=get(cfg.axes, 'Position'));
+grid(H(iaxes).baseaxes,'on')
 
-  if ~isempty(data)
-    H(iaxes).overaxes = axes(Position=get(cfg.axes, 'Position'));
-  end
+if ~isempty(data)
+  H(iaxes).overaxes = axes(Position=get(cfg.axes, 'Position'));
+end
 
-  % Get slices
-  [Vbase,Ubase,Wbase] = helper_vol2slice(base.vol, vox2ras_0to1(base.vox2ras), cfg.xyz(iaxes,:), cfg.basemethod);
+% Get slices
+[Vbase,Ubase,Wbase] = helper_vol2slice(base.vol, vox2ras_0to1(base.vox2ras), cfg.xyz(iaxes,:), cfg.basemethod);
 
-  if ~isempty(data)
-    [Vover,Uover,Wover] = helper_vol2slice(data.vol, vox2ras_0to1(data.vox2ras), cfg.xyz(iaxes,:), cfg.method);
-  end
+if ~isempty(data)
+  [Vover,Uover,Wover] = helper_vol2slice(data.vol, vox2ras_0to1(data.vox2ras), cfg.xyz(iaxes,:), cfg.method);
+end
 
-  % Draw base/over slices
-  switch (cfg.method)
-    case 'mip'
-      % - mip of overlay
+% Draw base/over slices
+switch (cfg.method)
+  case 'mip'
+    % - mip of overlay
+    H(iaxes).overslice = helper_over(H(iaxes).overaxes, Vover, Uover, Wover, cfg);
+    
+    % - base contour
+    H(iaxes).baseslice = helper_contour(H(iaxes).baseaxes, Vbase, Ubase, Wbase, cfg);
+    
+    % - mip-specific setting
+    set(H(iaxes).baseaxes, 'color','none')
+    axis(H(iaxes).baseaxes, 'image')
+    
+    % - equalize axes
+    helper_equalizeaxes(H(iaxes).baseaxes, H(iaxes).overaxes)
+    
+  otherwise
+    % - base image
+    Vbase_ = Vbase;
+    Vbase_(Vbase_==0) = nan;
+    H(iaxes).baseslice = imagesc(H(iaxes).baseaxes, Ubase.axis, Wbase.axis, Vbase_);
+    
+    
+    % - overlay
+    if ~isempty(data)
       H(iaxes).overslice = helper_over(H(iaxes).overaxes, Vover, Uover, Wover, cfg);
-
-      % - base contour
-      H(iaxes).baseslice = helper_contour(H(iaxes).baseaxes, Vbase, Ubase, Wbase, cfg);
-
-      % - mip-specific setting
-      set(H(iaxes).baseaxes, 'color','none')
-      axis(H(iaxes).baseaxes, 'image')
-
-      % - equalize axes
       helper_equalizeaxes(H(iaxes).baseaxes, H(iaxes).overaxes)
+    end
+    
+    % - overlay-specific setting
+    if ~cfg.showticks
+      set(H(iaxes).baseaxes,'xtick',[],'ytick',[])
+      grid(H(iaxes).baseaxes,'off')
+    end
+    
+end
 
-    otherwise
-      % - base image
-      Vbase_ = Vbase;
-      Vbase_(Vbase_==0) = nan;
-      H(iaxes).baseslice = imagesc(H(iaxes).baseaxes, Ubase.axis, Wbase.axis, Vbase_);
-      
-
-      % - overlay
-      if ~isempty(data)
-        H(iaxes).overslice = helper_over(H(iaxes).overaxes, Vover, Uover, Wover, cfg);
-        helper_equalizeaxes(H(iaxes).baseaxes, H(iaxes).overaxes)
-      end
-
-      % - overlay-specific setting
-      if ~cfg.showticks
-        set(H(iaxes).baseaxes,'xtick',[],'ytick',[])
-        grid(H(iaxes).baseaxes,'off')
-      end
-
+% - add contours
+if isfield(cfg,'contour')
+  H(iaxes).contour = {};
+  ncons = numel(cfg.contour);
+  if ~isfield(cfg,'contourwidth'), cfg.contourwidth = 1; end
+  if isfield(cfg,'contourcolormap')
+    cmap = cfg.contourcolormap;
+  else
+    cmap = brewermap(ncons, 'Set1');
   end
-
-  % - add contours
-  if isfield(cfg,'contour')
-    H(iaxes).contour = {};
-    ncons = numel(cfg.contour);
-    if ~isfield(cfg,'contourwidth'), cfg.contourwidth = 1; end
-    if isfield(cfg,'contourcolormap')
-      cmap = cfg.contourcolormap;
+  for icon = 1:ncons
+    [Vi, U, W] = helper_vol2slice( ...
+      cfg.contour{icon}.vol, vox2ras_0to1(cfg.contour{icon}.vox2ras), cfg.xyz(iaxes,:), 'nearest');
+    if ~isempty(data)
+      axes_ref = H(iaxes).overaxes;
     else
-      cmap = brewermap(ncons, 'Set1');
+      axes_ref = H(iaxes).baseaxes;
     end
-    for icon = 1:ncons
-      [Vi, U, W] = helper_vol2slice( ...
-        cfg.contour{icon}.vol, vox2ras_0to1(cfg.contour{icon}.vox2ras), cfg.xyz(iaxes,:), 'nearest');
-      if ~isempty(data)
-        axes_ref = H(iaxes).overaxes;
-      else
-        axes_ref = H(iaxes).baseaxes;
-      end
-      H(iaxes).contour{icon} = helper_contour(axes_ref, Vi, U, W, cfg);
-      H(iaxes).contour{icon}.Color = cmap(icon,:);
-      H(iaxes).contour{icon}.LineWidth = cfg.contourwidth;
-    end
+    H(iaxes).contour{icon} = helper_contour(axes_ref, Vi, U, W, cfg);
+    H(iaxes).contour{icon}.Color = cmap(icon,:);
+    H(iaxes).contour{icon}.LineWidth = cfg.contourwidth;
   end
+end
 
-  % - add annotations
+% - add annotations
 
-  % -- WORLD cooridinate (XYZ=RAS)
-  xyzdim = find(~isnan(cfg.xyz(iaxes,:)));
-  xyzlabel = 'XYZ';
-  u1 = median(Ubase.axis);
-  if not(isfield(cfg,'coordinatelocation_slice'))
-    w1 = prctile(Wbase.axis,95);
-  else
-    w1 = Wbase.axis(1) + range(Wbase.axis) * cfg.coordinatelocation_slice;
+% -- WORLD cooridinate (XYZ=RAS)
+xyzdim = find(~isnan(cfg.xyz(iaxes,:)));
+xyzlabel = 'XYZ';
+u1 = median(Ubase.axis);
+if not(isfield(cfg,'coordinatelocation_slice'))
+  w1 = prctile(Wbase.axis,95);
+else
+  w1 = Wbase.axis(1) + range(Wbase.axis) * cfg.coordinatelocation_slice;
+end
+text(H(iaxes).baseaxes, u1, w1, sprintf('%s = %.0f %s', xyzlabel(xyzdim), cfg.xyz(iaxes,xyzdim), cfg.unit), ...
+  'fontsize',cfg.coordfontsize, 'color',cfg.coordfontcolor, 'HorizontalAlignment','center');
+
+% -- FILE NAME? TITLE BAR?
+
+
+% - common setting
+set(H(iaxes).baseaxes, 'DataAspectRatio',[1 1 1], 'Ydir','nor', 'Visible','off')
+colormap(H(iaxes).baseaxes, cfg.basecolormap)
+if cfg.showticks
+  xlabel(H(iaxes).baseaxes, Ubase.axisname);
+  ylabel(H(iaxes).baseaxes, Wbase.axisname);
+  H(iaxes).baseaxes.FontSize = 7;
+end
+
+if ~isempty(data)
+  set(H(iaxes).overaxes, 'visible','off', 'DataAspectRatio',[1 1 1], 'Ydir','nor')
+  colormap(H(iaxes).overaxes, cfg.colormap)
+  try
+    clim(H(iaxes).overaxes, cfg.caxis)
+  catch ME
+    warning('caxis not sane')
   end
-  text(H(iaxes).baseaxes, u1, w1, sprintf('%s = %.0f %s', xyzlabel(xyzdim), cfg.xyz(iaxes,xyzdim), cfg.unit), ...
-    'fontsize',cfg.coordfontsize, 'color',cfg.coordfontcolor, 'HorizontalAlignment','center');
-
-  % -- FILE NAME? TITLE BAR?
-
-
-  % - common setting
-  set(H(iaxes).baseaxes, 'DataAspectRatio',[1 1 1], 'Ydir','nor', 'Visible','off')
-  colormap(H(iaxes).baseaxes, cfg.basecolormap)
-  if cfg.showticks
-    xlabel(H(iaxes).baseaxes, Ubase.axisname);
-    ylabel(H(iaxes).baseaxes, Wbase.axisname);
-    H(iaxes).baseaxes.FontSize = 7;
+  try
+    clim(H(iaxes).baseaxes, cfg.basecaxis)
+  catch ME
+    warning('caxis not sane')
   end
-
-  if ~isempty(data)
-    set(H(iaxes).overaxes, 'visible','off', 'DataAspectRatio',[1 1 1], 'Ydir','nor')
-    colormap(H(iaxes).overaxes, cfg.colormap)
-    try
-      clim(H(iaxes).overaxes, cfg.caxis)
-    catch ME
-      warning('caxis not sane')
-    end
-    try
-      clim(H(iaxes).baseaxes, cfg.basecaxis)
-    catch ME
-      warning('caxis not sane')
-    end
-  else
-    try
-      clim(H(iaxes).baseaxes, cfg.basecaxis)
-    catch ME
-      warning('caxis not sane')
-    end
+else
+  try
+    clim(H(iaxes).baseaxes, cfg.basecaxis)
+  catch ME
+    warning('caxis not sane')
   end
-% end
+end
+
 
 
 %% Colorbar
@@ -386,7 +418,7 @@ if isfield(cfg,'colorbarposition')
 else
   H(iaxes).colorbar.Position = [.4 .41 .2 .01];
 end
-  
+
 H(iaxes).colorbar.FontSize = cfg.coordfontsize;
 if isfield(cfg,'colorbarxlabel')
   H(iaxes).colorbar.Label.String = cfg.colorbarxlabel;
@@ -403,20 +435,6 @@ if isfield(cfg,'title')
   title(cfg.title, 'color', cfg.coordfontcolor)
 end
 
-% %% OUT
-% if isfield(cfg,'fname_png')
-%   if ~isfield(cfg,'dpi')
-%     cfg.dpi = 300;
-%   end
-%   gl = opengl('data');
-%   if strcmp(gl.Renderer, 'None')
-%     rendopt = '-painters';
-%   else
-%     rendopt = '-opengl';
-%   end
-%   export_fig(cfg.fname_png,['-r',num2str(cfg.dpi)],rendopt)
-%   close(cfg.figurehandle)
-% end
 if ~nargout, clear H cfg; end
 
 end

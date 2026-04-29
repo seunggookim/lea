@@ -84,13 +84,13 @@ end
 fname_png = [p1,'/',f1,'.',subjid,'.png'];
 if ~isfield(job,'nofigure'), job.nofigure = 0; end
 if (~exist(fname_png,'file') || overwrite) && (~job.nofigure)
-  surfs = fsss_read_all_FS_surfs(subjid, fsdir);
+  surfs = myfs_readsurfs(subjid, fsdir);
   cfg = struct('colorbartitle',[subjid,outsuffix], 'fname_png',fname_png,...
     'dpi',200, 'basesurf','white', 'colorbarinterp','none',...
     'colormap',parula);
   if isfield(job,'caxis'), cfg.caxis = job.caxis; end
   if isfield(job,'colormap'), cfg.colormap = job.colormap; end
-  myfs_view(surfs, Y, cfg);
+  myfs_viewsurf(surfs, Y, cfg);
 end
 disp(['> Done:',myname,' on ',subjid])
 end

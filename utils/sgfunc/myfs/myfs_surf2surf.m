@@ -84,7 +84,7 @@ if (~isfile(fname_png) || overwrite) && (~job.nofigure)
   map = {Y{1}(:,1), Y{2}(:,1)};
   map{1}(map{1}==0) = nan;
   map{2}(map{2}==0) = nan;
-  myfs_view(surfs, map, cfg);
+  myfs_viewsurf(surfs, map, cfg);
 end
 disp(['> Done:',myname,': ',srcsubj,' to ',trgsubj]);
 end

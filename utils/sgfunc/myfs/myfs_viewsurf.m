@@ -458,18 +458,18 @@ if ~isfield(cfg,'basecolormap')
   end
 end
 
-%% -- No OPENGL?
-g = opengl('data');
-if strcmp(g.Renderer,'None')
-  if isfield(surfs,'smoothwm')
-    cfg.basesurf = 'smoothwm';
-  elseif isfield(surfs,'white')
-    cfg.basesurf = 'white';
-  end
-  cfg.basecurv = false;
-  % NaN values will be shown as the smallest value in the colormap:
-  cfg.colormap = [cfg.basecolormap(2,:); cfg.colormap];
-end
+% %% -- No OPENGL?
+% g = opengl('data');
+% if strcmp(g.Renderer,'None')
+%   if isfield(surfs,'smoothwm')
+%     cfg.basesurf = 'smoothwm';
+%   elseif isfield(surfs,'white')
+%     cfg.basesurf = 'white';
+%   end
+%   cfg.basecurv = false;
+%   % NaN values will be shown as the smallest value in the colormap:
+%   cfg.colormap = [cfg.basecolormap(2,:); cfg.colormap];
+% end
 
 %% --- Transparent subthreshold values? or not...
 if ~isfield(cfg,'subthres')
@@ -614,7 +614,7 @@ if cfg.IsColorbar
     if ~isfield(cfg,'colorbarinterp')
       cfg.colorbarinterp='none';
     end
-    if isfield(cfg,'colorbartitle ')
+    if isfield(cfg,'colorbartitle')
       title(H(iaxes).colorbar, cfg.colorbartitle, ...
         'fontsize', cfg.colorbarfontsize*1.2,'fontweight','bold', ...
         'color',cfg.histfontcolor, 'interp',cfg.colorbarinterp);
